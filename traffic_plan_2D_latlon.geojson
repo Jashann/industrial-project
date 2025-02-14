@@ -1,0 +1,21 @@
+{
+"type": "FeatureCollection",
+"name": "traffic_plan_2D_latlon",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082326554111972, 49.80332437623585 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082303676657574, 49.803332201930083 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082280799195885, 49.803340027619697 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082257921726921, 49.8033478533047 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082235044250652, 49.803355678985092 ] } },
+{ "type": "Feature", "properties": { "type": "Zone", "label": "Buffer Space" }, "geometry": { "type": "LineString", "coordinates": [ [ -97.082235044250652, 49.803355678985092 ], [ -97.082135345558669, 49.803389782755602 ] ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082121692440523, 49.803401887487794 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082237657240228, 49.803355953700276 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082121692440523, 49.803401887487794 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082280355443018, 49.803261217811176 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082201540032017, 49.803331095218397 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082083912525988, 49.803339789730721 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082162982131891, 49.803302618523055 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Closure Perimeter Cone" }, "geometry": { "type": "Point", "coordinates": [ -97.082280355443018, 49.803261217811176 ] } }
+]
+}

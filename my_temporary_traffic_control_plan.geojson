@@ -1,0 +1,15 @@
+{
+"type": "FeatureCollection",
+"name": "my_temporary_traffic_control_plan",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32614" } },
+"features": [
+{ "type": "Feature", "properties": { "type": "Sign", "label": "Road Work Ahead (TC-2)" }, "geometry": { "type": "Point", "coordinates": [ 643620.653045230312273, 5529438.420246687717736 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ 643592.412705477676354, 5529479.681405307725072 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ 643586.764637527056038, 5529487.933637032285333 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ 643581.116569576552138, 5529496.185868755914271 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ 643575.468501626048237, 5529504.438100479543209 ] } },
+{ "type": "Feature", "properties": { "type": "Channel Device", "label": "Taper Barrel/Cone" }, "geometry": { "type": "Point", "coordinates": [ 643569.820433675544336, 5529512.69033220410347 ] } },
+{ "type": "Feature", "properties": { "type": "Zone", "label": "Buffer Space" }, "geometry": { "type": "LineString", "coordinates": [ [ 643569.820433675544336, 5529512.69033220410347 ], [ 643558.52429777442012, 5529529.194795651361346 ] ] } },
+{ "type": "Feature", "properties": { "type": "Sign", "label": "End Road Work" }, "geometry": { "type": "Point", "coordinates": [ 643555.700263799168169, 5529533.320911513641477 ] } }
+]
+}
