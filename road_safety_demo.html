@@ -249,6 +249,54 @@
         border-radius: 4px;
         font-size: 14px;
       }
+      #download-btn,
+      #export-btn,
+      #import-btn {
+        width: 50px;
+        overflow: hidden;
+        white-space: nowrap;
+        transition: width 0.3s ease-in-out;
+        padding: 10px;
+        display: flex;
+        align-items: center;
+      }
+
+      /* Keep icons visible and centered when not hovered */
+      #download-btn ion-icon,
+      #export-btn ion-icon,
+      #import-btn ion-icon {
+        margin-right: 0;
+        transition: margin-right 0.3s;
+      }
+
+      #download-btn span,
+      #export-btn span,
+      #import-btn span {
+        opacity: 0;
+        transition: opacity 0.2s;
+        margin-left: 5px;
+        white-space: nowrap;
+        display: none;
+      }
+
+      #download-btn:hover,
+      #export-btn:hover,
+      #import-btn:hover {
+        width: 150px;
+      }
+
+      #download-btn:hover ion-icon,
+      #export-btn:hover ion-icon,
+      #import-btn:hover ion-icon {
+        margin-right: 5px;
+      }
+
+      #download-btn:hover span,
+      #export-btn:hover span,
+      #import-btn:hover span {
+        opacity: 1;
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -261,17 +309,23 @@
     </div>
     <div id="map"></div>
 
-    <!-- Download Map Button (top right) -->
+    <!-- Replace the existing button elements with these -->
     <button id="download-btn" class="flex-center">
-      <ion-icon name="cloud-download-outline"></ion-icon> Download
+    <ion-icon name="cloud-download-outline"></ion-icon>
+    <span>Download</span>
     </button>
-    <!-- Export and Import State Buttons -->
+
     <button id="export-btn" class="flex-center">
-      <ion-icon name="save-outline"></ion-icon> Export State
+    <ion-icon name="save-outline"></ion-icon>
+    <span>Export State</span>
     </button>
+
     <button id="import-btn" class="flex-center">
-      <ion-icon name="folder-open-outline"></ion-icon> Import State
+    <ion-icon name="folder-open-outline"></ion-icon>
+    <span>Import State</span>
     </button>
+
+
     <!-- Hidden file input for importing state -->
     <input type="file" id="import-input" style="display: none" accept=".json" />
 
