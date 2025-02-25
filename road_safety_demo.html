@@ -107,6 +107,32 @@
         background: linear-gradient(135deg, #38a169, #2f855a);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
+      /* Export and Import Buttons */
+      #export-btn,
+      #import-btn {
+        position: fixed;
+        right: 20px;
+        padding: 10px 15px;
+        background: linear-gradient(135deg, #f6ad55, #ed8936);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        z-index: 1100;
+        font-size: 14px;
+        transition: background 0.3s, box-shadow 0.3s;
+      }
+      #export-btn:hover,
+      #import-btn:hover {
+        background: linear-gradient(135deg, #ed8936, #dd6b20);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      #export-btn {
+        top: 60px;
+      }
+      #import-btn {
+        top: 100px;
+      }
       ion-icon {
         margin-right: 10px;
       }
@@ -239,6 +265,15 @@
     <button id="download-btn" class="flex-center">
       <ion-icon name="cloud-download-outline"></ion-icon> Download
     </button>
+    <!-- Export and Import State Buttons -->
+    <button id="export-btn" class="flex-center">
+      <ion-icon name="save-outline"></ion-icon> Export State
+    </button>
+    <button id="import-btn" class="flex-center">
+      <ion-icon name="folder-open-outline"></ion-icon> Import State
+    </button>
+    <!-- Hidden file input for importing state -->
+    <input type="file" id="import-input" style="display: none" accept=".json" />
 
     <!-- Custom Confirm Modal (Yes/No) -->
     <div id="custom-confirm-modal" class="custom-modal">
@@ -296,6 +331,9 @@
     <!-- Load leaflet-image plugin -->
     <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
     <script>
+      // Global array to store all markers
+      var allMarkers = [];
+
       // Custom confirm function (Yes/No)
       function customConfirm(message) {
         return new Promise((resolve) => {
@@ -420,10 +458,12 @@
 
       /**
        * Creates a marker that shows its popup on hover and, on click, prompts the user for an action.
+       * The marker is added to the global allMarkers array.
        */
       function createInteractiveMarker(lat, lon, popupContent) {
         var marker = L.marker([lat, lon], { draggable: false }).addTo(map);
         marker.bindPopup(popupContent);
+        allMarkers.push(marker);
 
         // Show popup on hover.
         marker.on("mouseover", function () {
@@ -458,6 +498,7 @@
             );
             if (confirmDelete) {
               map.removeLayer(marker);
+              allMarkers = allMarkers.filter((m) => m !== marker);
             }
           } else if (action === "rename") {
             let newName = await customRename(marker.getPopup().getContent());
@@ -664,6 +705,60 @@
           link.click();
           document.body.removeChild(link);
         });
+      });
+
+      // Export state: save all markers to a JSON file.
+      function exportState() {
+        var markersData = [];
+        allMarkers.forEach(function(marker) {
+          var latlng = marker.getLatLng();
+          var content = marker.getPopup() ? marker.getPopup().getContent() : "";
+          markersData.push({
+            lat: latlng.lat,
+            lng: latlng.lng,
+            popupContent: content
+          });
+        });
+        var dataStr = JSON.stringify(markersData, null, 2);
+        var blob = new Blob([dataStr], { type: "application/json" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "map_state.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+
+      // Import state: load markers from a JSON file.
+      document.getElementById("import-input").addEventListener("change", function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            var markersData = JSON.parse(e.target.result);
+            // Remove existing markers
+            allMarkers.forEach(function(marker) {
+              map.removeLayer(marker);
+            });
+            allMarkers = [];
+            // Add imported markers
+            markersData.forEach(function(data) {
+              createInteractiveMarker(data.lat, data.lng, data.popupContent);
+            });
+          } catch (err) {
+            alert("Error loading state file: " + err);
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      // Event listeners for export/import buttons.
+      document.getElementById("export-btn").addEventListener("click", exportState);
+      document.getElementById("import-btn").addEventListener("click", function() {
+        document.getElementById("import-input").click();
       });
     </script>
   </body>
