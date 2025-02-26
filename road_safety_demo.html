@@ -403,7 +403,7 @@
       var currentPolygonLayer = null;
       var drawnPolygons = []; // Array to hold all finished polygon layers
       
-      // Flag to indicate if the polygon modal is open
+      // Flag to indicate if the polygon options modal is open
       var polygonModalOpen = false;
 
       // Custom confirm function (Yes/No)
@@ -509,10 +509,12 @@
         });
       }
 
-      // Initialize the map.
+      // Initialize the map with an updated tile layer that allows more zoom.
       var map = L.map("map").setView([49.8033, -97.0823], 16);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
+        maxNativeZoom: 19,
+        maxZoom: 22
       }).addTo(map);
 
       // (Optional) Load additional GeoJSON data.
