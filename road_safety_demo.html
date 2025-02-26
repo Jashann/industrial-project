@@ -402,6 +402,9 @@
       var currentPolygonPoints = [];
       var currentPolygonLayer = null;
       var drawnPolygons = []; // Array to hold all finished polygon layers
+      
+      // Flag to indicate if the polygon modal is open
+      var polygonModalOpen = false;
 
       // Custom confirm function (Yes/No)
       function customConfirm(message) {
@@ -589,6 +592,7 @@
         let coordsJSON = JSON.stringify(coords, null, 2);
         var modal = document.getElementById("polygon-options-modal");
         modal.style.display = "flex";
+        polygonModalOpen = true;
 
         document.getElementById("polygon-unselect-btn").onclick = function (e) {
           e.stopPropagation();
@@ -599,25 +603,33 @@
             return p !== polygon;
           });
           modal.style.display = "none";
+          polygonModalOpen = false;
         };
         document.getElementById("polygon-copy-btn").onclick = function (e) {
           e.stopPropagation();
           navigator.clipboard.writeText(coordsJSON).then(function () {
             alert("Coordinates copied to clipboard.");
             modal.style.display = "none";
+            polygonModalOpen = false;
           }, function (err) {
             alert("Failed to copy: " + err);
+            modal.style.display = "none";
+            polygonModalOpen = false;
           });
         };
         document.getElementById("polygon-view-btn").onclick = function (e) {
           e.stopPropagation();
           alert("Polygon Coordinates:\n" + coordsJSON);
           modal.style.display = "none";
+          polygonModalOpen = false;
         };
       }
 
       // Modify the map click event to support both marker and polygon drawing.
       map.on("click", async function (e) {
+        // If the polygon options modal is open, do nothing.
+        if (polygonModalOpen) return;
+        
         // If polygon drawing mode is active, add point to current polygon.
         if (polygonDrawingMode) {
           currentPolygonPoints.push(e.latlng);
