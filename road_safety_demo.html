@@ -55,7 +55,7 @@
       #location-input:focus {
         border-color: #aaa;
       }
-      /* Modern Button Styles */
+      /* Search Button */
       button {
         outline: none;
         border: none;
@@ -69,7 +69,6 @@
         justify-content: center;
         align-items: center;
       }
-      /* Search Button */
       #search-btn {
         width: 100%;
         padding: 10px;
@@ -88,97 +87,82 @@
         background: linear-gradient(135deg, #5a67d8, #6b46c1);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
-      /* Download Button (top right) */
-      #download-btn {
+      /* Buttons Container */
+      .btns-left-top {
         position: fixed;
         top: 20px;
         right: 20px;
-        padding: 10px 15px;
-        background: linear-gradient(135deg, #48bb78, #38a169);
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        z-index: 1100;
-        font-size: 14px;
-        transition: background 0.3s, box-shadow 0.3s;
-      }
-      #download-btn:hover {
-        background: linear-gradient(135deg, #38a169, #2f855a);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-      /* Export and Import Buttons */
-      #export-btn,
-      #import-btn {
-        position: fixed;
-        right: 20px;
-        padding: 10px 15px;
-        background: linear-gradient(135deg, #f6ad55, #ed8936);
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        z-index: 1100;
-        font-size: 14px;
-        transition: background 0.3s, box-shadow 0.3s;
-      }
-      #export-btn:hover,
-      #import-btn:hover {
-        background: linear-gradient(135deg, #ed8936, #dd6b20);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-      #export-btn {
-        top: 60px;
-      }
-      #import-btn {
-        top: 100px;
-      }
-      /* New Buttons: Select Area and Finish Area */
-      #select-area-btn {
-        position: fixed;
-        right: 20px;
-        top: 140px;
-        padding: 10px 15px;
-        background: linear-gradient(135deg, #8e44ad, #9b59b6);
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        z-index: 1100;
-        font-size: 14px;
-        transition: background 0.3s, box-shadow 0.3s;
         display: flex;
+        flex-direction: row;
+        gap: 10px;
+        z-index: 1100;
+      }
+      /* Common Button Styles within the Container */
+      .btns-left-top button {
+        padding: 10px 15px;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        display: inline-flex;
         align-items: center;
         gap: 5px;
+        transition: background 0.3s, box-shadow 0.3s, width 0.3s;
+        width: 50px;
+        overflow: hidden;
+        white-space: nowrap;
       }
-      #select-area-btn:hover {
-        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+      .btns-left-top button ion-icon {
+        font-size: 18px;
+        margin-top: 5px;
+      }
+      .btns-left-top button span {
+        opacity: 0;
+        transition: opacity 0.2s;
+        margin-left: 5px;
+        white-space: nowrap;
+        display: none;
+      }
+      .btns-left-top button:hover {
+        width: 150px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      .btns-left-top button:hover span {
+        opacity: 1;
+        display: block;
+      }
+      /* Individual Button Backgrounds */
+      .btn-download {
+        background: linear-gradient(135deg, #48bb78, #38a169);
+      }
+      .btn-download:hover {
+        background: linear-gradient(135deg, #38a169, #2f855a);
+      }
+      .btn-export,
+      .btn-import {
+        background: linear-gradient(135deg, #f6ad55, #ed8936);
+      }
+      .btn-export:hover,
+      .btn-import:hover {
+        background: linear-gradient(135deg, #ed8936, #dd6b20);
+      }
+      .btn-select {
+        background: linear-gradient(135deg, #8e44ad, #9b59b6);
+      }
+      .btn-select:hover {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+      }
+      .btn-finish {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
       }
       #finish-area-btn {
-        position: fixed;
-        right: 20px;
-        top: 180px;
-        padding: 10px 15px;
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        z-index: 1100;
-        font-size: 14px;
-        transition: background 0.3s, box-shadow 0.3s;
         display: none;
-        align-items: center;
-        gap: 5px;
       }
-      #finish-area-btn:hover {
+      .btn-finish:hover {
         background: linear-gradient(135deg, #c0392b, #e74c3c);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
-      ion-icon {
-        margin-right: 10px;
-      }
+      /* Suggestions Dropdown */
       #suggestions {
         background: #fff;
         border: 1px solid #ddd;
@@ -292,49 +276,6 @@
         border-radius: 4px;
         font-size: 14px;
       }
-      #download-btn,
-      #export-btn,
-      #import-btn {
-        width: 50px;
-        overflow: hidden;
-        white-space: nowrap;
-        transition: width 0.3s ease-in-out;
-        padding: 10px;
-        display: flex;
-        align-items: center;
-      }
-      /* Keep icons visible and centered when not hovered */
-      #download-btn ion-icon,
-      #export-btn ion-icon,
-      #import-btn ion-icon {
-        margin-right: 0;
-        transition: margin-right 0.3s;
-      }
-      #download-btn span,
-      #export-btn span,
-      #import-btn span {
-        opacity: 0;
-        transition: opacity 0.2s;
-        margin-left: 5px;
-        white-space: nowrap;
-        display: none;
-      }
-      #download-btn:hover,
-      #export-btn:hover,
-      #import-btn:hover {
-        width: 150px;
-      }
-      #download-btn:hover ion-icon,
-      #export-btn:hover ion-icon,
-      #import-btn:hover ion-icon {
-        margin-right: 5px;
-      }
-      #download-btn:hover span,
-      #export-btn:hover span,
-      #import-btn:hover span {
-        opacity: 1;
-        display: block;
-      }
     </style>
   </head>
   <body>
@@ -347,32 +288,34 @@
     </div>
     <div id="map"></div>
 
-    <!-- Existing Buttons -->
-    <button id="download-btn" class="flex-center">
-      <ion-icon name="cloud-download-outline"></ion-icon>
-      <span>Download</span>
-    </button>
+    <!-- Buttons Container -->
+    <div class="btns-left-top">
+      <button id="download-btn" class="flex-center btn-download">
+        <ion-icon name="cloud-download-outline"></ion-icon>
+        <span>Download</span>
+      </button>
 
-    <button id="export-btn" class="flex-center">
-      <ion-icon name="save-outline"></ion-icon>
-      <span>Export State</span>
-    </button>
+      <button id="export-btn" class="flex-center btn-export">
+        <ion-icon name="save-outline"></ion-icon>
+        <span>Export State</span>
+      </button>
 
-    <button id="import-btn" class="flex-center">
-      <ion-icon name="folder-open-outline"></ion-icon>
-      <span>Import State</span>
-    </button>
+      <button id="import-btn" class="flex-center btn-import">
+        <ion-icon name="folder-open-outline"></ion-icon>
+        <span>Import State</span>
+      </button>
 
-    <!-- New Buttons for Polygon Selection -->
-    <button id="select-area-btn" class="flex-center">
-      <ion-icon name="crop-outline"></ion-icon>
-      <span>Select Area</span>
-    </button>
+      <!-- New Buttons for Polygon Selection -->
+      <button id="select-area-btn" class="flex-center btn-select">
+        <ion-icon name="crop-outline"></ion-icon>
+        <span>Select Area</span>
+      </button>
 
-    <button id="finish-area-btn" class="flex-center">
-      <ion-icon name="checkmark-outline"></ion-icon>
-      <span>Finish Area</span>
-    </button>
+      <button id="finish-area-btn" class="flex-center btn-finish">
+        <ion-icon name="checkmark-outline"></ion-icon>
+        <span>Finish Area</span>
+      </button>
+    </div>
 
     <!-- Hidden file input for importing state -->
     <input type="file" id="import-input" style="display: none" accept=".json" />
@@ -880,7 +823,7 @@
       });
 
       // New: Event listener for Select Area button to enable polygon drawing mode.
-      document.getElementById("select-area-btn").addEventListener("click", function() {
+      document.getElementById("select-area-btn").addEventListener("click", function () {
         polygonDrawingMode = true;
         polygonPoints = [];
         if (polygonLayer) {
@@ -890,11 +833,11 @@
         alert(
           "Polygon drawing mode activated. Click on the map to add polygon vertices. When finished, click the 'Finish Area' button."
         );
-        document.getElementById("finish-area-btn").style.display = "flex";
+        document.getElementById("finish-area-btn").style.display = "inline-flex";
       });
 
       // New: Event listener for Finish Area button to end polygon drawing mode and output coordinates.
-      document.getElementById("finish-area-btn").addEventListener("click", function() {
+      document.getElementById("finish-area-btn").addEventListener("click", function () {
         polygonDrawingMode = false;
         this.style.display = "none";
         if (polygonPoints.length < 3) {
