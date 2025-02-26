@@ -381,8 +381,9 @@
 
       // Variables for polygon drawing
       var polygonDrawingMode = false;
-      var polygonPoints = [];
-      var polygonLayer = null;
+      var currentPolygonPoints = [];
+      var currentPolygonLayer = null;
+      var drawnPolygons = []; // Array to hold all finished polygon layers
 
       // Custom confirm function (Yes/No)
       function customConfirm(message) {
@@ -562,15 +563,15 @@
 
       // Modify the map click event to support both marker and polygon drawing.
       map.on("click", async function (e) {
-        // If polygon drawing mode is active, add point to polygon
+        // If polygon drawing mode is active, add point to current polygon.
         if (polygonDrawingMode) {
-          polygonPoints.push(e.latlng);
-          if (polygonLayer) {
-            polygonLayer.setLatLngs(polygonPoints);
+          currentPolygonPoints.push(e.latlng);
+          if (currentPolygonLayer) {
+            currentPolygonLayer.setLatLngs(currentPolygonPoints);
           } else {
-            polygonLayer = L.polygon(polygonPoints, { color: "red" }).addTo(map);
+            currentPolygonLayer = L.polygon(currentPolygonPoints, { color: "red" }).addTo(map);
           }
-          return; // Skip marker confirmation when drawing polygon
+          return; // Skip marker confirmation when drawing polygon.
         }
         // Otherwise, prompt to add a new marker.
         const addPin = await customConfirm("Do you want to add a new pin here?");
@@ -822,13 +823,14 @@
         document.getElementById("import-input").click();
       });
 
-      // New: Event listener for Select Area button to enable polygon drawing mode.
+      // NEW: Event listener for Select Area button to enable polygon drawing mode.
       document.getElementById("select-area-btn").addEventListener("click", function () {
         polygonDrawingMode = true;
-        polygonPoints = [];
-        if (polygonLayer) {
-          map.removeLayer(polygonLayer);
-          polygonLayer = null;
+        currentPolygonPoints = [];
+        // If there's an unfinished polygon from a previous selection, remove it.
+        if (currentPolygonLayer) {
+          map.removeLayer(currentPolygonLayer);
+          currentPolygonLayer = null;
         }
         alert(
           "Polygon drawing mode activated. Click on the map to add polygon vertices. When finished, click the 'Finish Area' button."
@@ -836,19 +838,24 @@
         document.getElementById("finish-area-btn").style.display = "inline-flex";
       });
 
-      // New: Event listener for Finish Area button to end polygon drawing mode and output coordinates.
+      // NEW: Event listener for Finish Area button to end polygon drawing mode and output coordinates.
       document.getElementById("finish-area-btn").addEventListener("click", function () {
         polygonDrawingMode = false;
         this.style.display = "none";
-        if (polygonPoints.length < 3) {
+        if (currentPolygonPoints.length < 3) {
           alert("A polygon requires at least 3 points.");
           return;
         }
-        let coordinates = polygonPoints.map(function(latlng) {
+        let coordinates = currentPolygonPoints.map(function(latlng) {
           return { lat: latlng.lat, lng: latlng.lng };
         });
         console.log("Polygon Coordinates:", coordinates);
         alert("Polygon Coordinates:\n" + JSON.stringify(coordinates, null, 2));
+        // Save the finished polygon so it remains on the map.
+        drawnPolygons.push(currentPolygonLayer);
+        // Reset current polygon variables for the next selection.
+        currentPolygonPoints = [];
+        currentPolygonLayer = null;
       });
     </script>
   </body>
