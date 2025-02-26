@@ -943,12 +943,12 @@
 
       // NEW: Finish drawing polygon.
       document.getElementById("finish-area-btn").addEventListener("click", function () {
-        polygonDrawingMode = false;
-        this.style.display = "none";
         if (currentPolygonPoints.length < 3) {
           alert("A polygon requires at least 3 points.");
           return;
         }
+        polygonDrawingMode = false;
+        this.style.display = "none";
         const finishedPolygon = currentPolygonLayer;
         finishedPolygon.on("click", function (e) {
           showPolygonOptionsModal(finishedPolygon);
