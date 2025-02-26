@@ -225,11 +225,11 @@
         transition: background 0.3s, box-shadow 0.3s;
       }
       /* Specific Modal Button Colors */
-      #custom-confirm-yes {
+      #custom-confirm-yes, #polygon-view-btn {
         background: linear-gradient(135deg, #28a745, #218838);
         color: #fff;
       }
-      #custom-confirm-yes:hover {
+      #custom-confirm-yes:hover, #polygon-view-btn:hover {
         background: linear-gradient(135deg, #218838, #1e7e34);
       }
       #custom-confirm-no {
@@ -246,18 +246,18 @@
       #action-drag:hover {
         background: linear-gradient(135deg, #138496, #117a8b);
       }
-      #action-delete {
+      #action-delete, #polygon-unselect-btn {
         background: linear-gradient(135deg, #dc3545, #c82333);
         color: #fff;
       }
-      #action-delete:hover {
+      #action-delete:hover, #polygon-unselect-btn:hover {
         background: linear-gradient(135deg, #c82333, #bd2130);
       }
-      #action-rename {
+      #action-rename, #polygon-copy-btn {
         background: linear-gradient(135deg, #f6ad55, #ed8936);
         color: #fff;
       }
-      #action-rename:hover {
+      #action-rename:hover, #polygon-copy-btn:hover {
         background: linear-gradient(135deg, #ed8936, #dd6b20);
       }
       #action-cancel {
@@ -367,6 +367,24 @@
           </button>
           <button id="custom-rename-cancel">
             <ion-icon name="close-outline"></ion-icon> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Polygon Options Modal (Same design as custom-choice modal) -->
+    <div id="polygon-options-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p id="polygon-options-message">Polygon Options</p>
+        <div class="custom-modal-buttons">
+          <button id="polygon-unselect-btn">
+            <ion-icon name="close-outline"></ion-icon> Unselect Area
+          </button>
+          <button id="polygon-copy-btn">
+            <ion-icon name="copy-outline"></ion-icon> Copy Coordinates
+          </button>
+          <button id="polygon-view-btn">
+            <ion-icon name="eye-outline"></ion-icon> View Coordinates
           </button>
         </div>
       </div>
@@ -561,6 +579,34 @@
         return marker;
       }
 
+      // Function to show polygon options using the new modal.
+      function showPolygonOptionsModal(polygon) {
+        // Get the polygon's coordinates (using first ring).
+        let latlngs = polygon.getLatLngs();
+        let coords = latlngs[0].map(function (latlng) {
+          return { lat: latlng.lat, lng: latlng.lng };
+        });
+        let coordsJSON = JSON.stringify(coords, null, 2);
+        var modal = document.getElementById("polygon-options-modal");
+        modal.style.display = "flex";
+
+        document.getElementById("polygon-unselect-btn").onclick = function () {
+          modal.style.display = "none";
+        };
+        document.getElementById("polygon-copy-btn").onclick = function () {
+          navigator.clipboard.writeText(coordsJSON).then(function () {
+            alert("Coordinates copied to clipboard.");
+            modal.style.display = "none";
+          }, function (err) {
+            alert("Failed to copy: " + err);
+          });
+        };
+        document.getElementById("polygon-view-btn").onclick = function () {
+          alert("Polygon Coordinates:\n" + coordsJSON);
+          modal.style.display = "none";
+        };
+      }
+
       // Modify the map click event to support both marker and polygon drawing.
       map.on("click", async function (e) {
         // If polygon drawing mode is active, add point to current polygon.
@@ -587,7 +633,6 @@
       });
 
       // Function to perform a search and add markers.
-      // This version assumes a construction zone after confirmation.
       async function performSearch(query) {
         try {
           const response = await fetch(
@@ -605,7 +650,6 @@
               "Do you want to designate this area as a construction zone?"
             );
             if (!designate) {
-              // Even if not designated, recenter the map and show a simple popup.
               map.setView([centerLat, centerLon], 16);
               L.popup()
                 .setLatLng([centerLat, centerLon])
@@ -623,7 +667,7 @@
               )
             );
     
-            // Place markers for tall cones (recommended for long-term work zones).
+            // Place markers for tall cones.
             const coneRadius = 0.005;
             for (let i = 0; i < 4; i++) {
               const angle = (2 * Math.PI) / 4 * i;
@@ -632,7 +676,7 @@
               markers.push(createInteractiveMarker(newLat, newLon, "Tall Cone"));
             }
     
-            // Marker for channelization barrel (TC-63) for tapering.
+            // Marker for channelization barrel.
             const barrelLat = centerLat + coneRadius * 1.5;
             const barrelLon = centerLon;
             markers.push(
@@ -757,9 +801,7 @@
             alert("Error generating map image.");
             return;
           }
-          // Convert canvas to data URL.
           var imgData = canvas.toDataURL("image/png");
-          // Create a temporary link to trigger the download.
           var link = document.createElement("a");
           link.href = imgData;
           link.download = "map.png";
@@ -801,12 +843,10 @@
         reader.onload = function(e) {
           try {
             var markersData = JSON.parse(e.target.result);
-            // Remove existing markers
             allMarkers.forEach(function(marker) {
               map.removeLayer(marker);
             });
             allMarkers = [];
-            // Add imported markers
             markersData.forEach(function(data) {
               createInteractiveMarker(data.lat, data.lng, data.popupContent);
             });
@@ -819,15 +859,14 @@
 
       // Event listeners for export/import buttons.
       document.getElementById("export-btn").addEventListener("click", exportState);
-      document.getElementById("import-btn").addEventListener("click", function() {
+      document.getElementById("import-btn").addEventListener("click", function () {
         document.getElementById("import-input").click();
       });
 
-      // NEW: Event listener for Select Area button to enable polygon drawing mode.
+      // NEW: Enable polygon drawing mode.
       document.getElementById("select-area-btn").addEventListener("click", function () {
         polygonDrawingMode = true;
         currentPolygonPoints = [];
-        // If there's an unfinished polygon from a previous selection, remove it.
         if (currentPolygonLayer) {
           map.removeLayer(currentPolygonLayer);
           currentPolygonLayer = null;
@@ -838,7 +877,7 @@
         document.getElementById("finish-area-btn").style.display = "inline-flex";
       });
 
-      // NEW: Event listener for Finish Area button to end polygon drawing mode and output coordinates.
+      // NEW: Finish drawing polygon.
       document.getElementById("finish-area-btn").addEventListener("click", function () {
         polygonDrawingMode = false;
         this.style.display = "none";
@@ -846,14 +885,12 @@
           alert("A polygon requires at least 3 points.");
           return;
         }
-        let coordinates = currentPolygonPoints.map(function(latlng) {
-          return { lat: latlng.lat, lng: latlng.lng };
+        const finishedPolygon = currentPolygonLayer;
+        finishedPolygon.on("click", function (e) {
+          showPolygonOptionsModal(finishedPolygon);
         });
-        console.log("Polygon Coordinates:", coordinates);
-        alert("Polygon Coordinates:\n" + JSON.stringify(coordinates, null, 2));
-        // Save the finished polygon so it remains on the map.
-        drawnPolygons.push(currentPolygonLayer);
-        // Reset current polygon variables for the next selection.
+        drawnPolygons.push(finishedPolygon);
+        alert("Polygon created. Click on it to view options.");
         currentPolygonPoints = [];
         currentPolygonLayer = null;
       });
