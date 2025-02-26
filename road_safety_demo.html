@@ -834,19 +834,36 @@
         });
       });
 
-      // Export state: save all markers to a JSON file.
+      // Export state: save all markers and polygons to a JSON file.
       function exportState() {
-        var markersData = [];
+        var stateData = {
+          markers: [],
+          polygons: []
+        };
+
+        // Export markers.
         allMarkers.forEach(function (marker) {
           var latlng = marker.getLatLng();
           var content = marker.getPopup() ? marker.getPopup().getContent() : "";
-          markersData.push({
+          stateData.markers.push({
             lat: latlng.lat,
             lng: latlng.lng,
             popupContent: content
           });
         });
-        var dataStr = JSON.stringify(markersData, null, 2);
+
+        // Export drawn polygons.
+        drawnPolygons.forEach(function (polygon) {
+          var latlngs = polygon.getLatLngs()[0]; // Assuming first ring.
+          var coords = latlngs.map(function (latlng) {
+            return { lat: latlng.lat, lng: latlng.lng };
+          });
+          stateData.polygons.push({
+            coordinates: coords
+          });
+        });
+
+        var dataStr = JSON.stringify(stateData, null, 2);
         var blob = new Blob([dataStr], { type: "application/json" });
         var url = URL.createObjectURL(blob);
         var a = document.createElement("a");
@@ -858,21 +875,45 @@
         URL.revokeObjectURL(url);
       }
 
-      // Import state: load markers from a JSON file.
+      // Import state: load markers and polygons from a JSON file.
       document.getElementById("import-input").addEventListener("change", function (e) {
         var file = e.target.files[0];
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function (e) {
           try {
-            var markersData = JSON.parse(e.target.result);
+            var stateData = JSON.parse(e.target.result);
+
+            // Remove current markers.
             allMarkers.forEach(function (marker) {
               map.removeLayer(marker);
             });
             allMarkers = [];
-            markersData.forEach(function (data) {
-              createInteractiveMarker(data.lat, data.lng, data.popupContent);
+
+            // Remove current polygons.
+            drawnPolygons.forEach(function (polygon) {
+              map.removeLayer(polygon);
             });
+            drawnPolygons = [];
+
+            // Re-add markers.
+            if (stateData.markers) {
+              stateData.markers.forEach(function (data) {
+                createInteractiveMarker(data.lat, data.lng, data.popupContent);
+              });
+            }
+
+            // Re-add polygons.
+            if (stateData.polygons) {
+              stateData.polygons.forEach(function (polygonData) {
+                var polygon = L.polygon(polygonData.coordinates, { color: "red" }).addTo(map);
+                // Add click listener to re-enable options.
+                polygon.on("click", function (e) {
+                  showPolygonOptionsModal(polygon);
+                });
+                drawnPolygons.push(polygon);
+              });
+            }
           } catch (err) {
             alert("Error loading state file: " + err);
           }
