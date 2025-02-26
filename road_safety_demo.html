@@ -590,10 +590,18 @@
         var modal = document.getElementById("polygon-options-modal");
         modal.style.display = "flex";
 
-        document.getElementById("polygon-unselect-btn").onclick = function () {
+        document.getElementById("polygon-unselect-btn").onclick = function (e) {
+          e.stopPropagation();
+          // Remove the polygon from the map.
+          map.removeLayer(polygon);
+          // Update the drawnPolygons array.
+          drawnPolygons = drawnPolygons.filter(function (p) {
+            return p !== polygon;
+          });
           modal.style.display = "none";
         };
-        document.getElementById("polygon-copy-btn").onclick = function () {
+        document.getElementById("polygon-copy-btn").onclick = function (e) {
+          e.stopPropagation();
           navigator.clipboard.writeText(coordsJSON).then(function () {
             alert("Coordinates copied to clipboard.");
             modal.style.display = "none";
@@ -601,7 +609,8 @@
             alert("Failed to copy: " + err);
           });
         };
-        document.getElementById("polygon-view-btn").onclick = function () {
+        document.getElementById("polygon-view-btn").onclick = function (e) {
+          e.stopPropagation();
           alert("Polygon Coordinates:\n" + coordsJSON);
           modal.style.display = "none";
         };
@@ -814,7 +823,7 @@
       // Export state: save all markers to a JSON file.
       function exportState() {
         var markersData = [];
-        allMarkers.forEach(function(marker) {
+        allMarkers.forEach(function (marker) {
           var latlng = marker.getLatLng();
           var content = marker.getPopup() ? marker.getPopup().getContent() : "";
           markersData.push({
@@ -836,18 +845,18 @@
       }
 
       // Import state: load markers from a JSON file.
-      document.getElementById("import-input").addEventListener("change", function(e) {
+      document.getElementById("import-input").addEventListener("change", function (e) {
         var file = e.target.files[0];
         if (!file) return;
         var reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
           try {
             var markersData = JSON.parse(e.target.result);
-            allMarkers.forEach(function(marker) {
+            allMarkers.forEach(function (marker) {
               map.removeLayer(marker);
             });
             allMarkers = [];
-            markersData.forEach(function(data) {
+            markersData.forEach(function (data) {
               createInteractiveMarker(data.lat, data.lng, data.popupContent);
             });
           } catch (err) {
