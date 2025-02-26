@@ -509,8 +509,8 @@
         });
       }
 
-      // Initialize the map with an updated tile layer that allows more zoom.
-      var map = L.map("map").setView([49.8033, -97.0823], 16);
+      // Initialize the map with canvas rendering enabled
+      var map = L.map("map", { preferCanvas: true }).setView([49.8033, -97.0823], 16);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap contributors",
         maxNativeZoom: 19,
