@@ -187,6 +187,42 @@
       .suggestion-item:hover {
         background: #f1f1f1;
       }
+      /* Vector visualization styles */
+      .highlighted-marker {
+        filter: drop-shadow(0 0 10px yellow);
+        transform: scale(1.2);
+      }
+      .vector-label div, .warning-label div {
+        font-size: 12px;
+        white-space: nowrap;
+        box-shadow: 0 0 5px rgba(0,0,0,0.3);
+      }
+      
+      /* Visualization Controls Panel */
+      #visualization-controls {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+      }
+      #visualization-controls h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        text-align: center;
+      }
+      .viz-control-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .viz-control-item label {
+        margin-left: 5px;
+        font-size: 12px;
+      }
       /* Custom Modal Styles */
       .custom-modal {
         position: fixed;
@@ -287,6 +323,36 @@
       </button>
     </div>
     <div id="map"></div>
+    
+    <!-- Visualization Controls Panel -->
+    <div id="visualization-controls">
+      <h3>Visualization Controls</h3>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-vectors" checked>
+        <label for="show-vectors">Show Direction Vectors</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-edge-vectors">
+        <label for="show-edge-vectors">Show Edge Vectors</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-sign-paths" checked>
+        <label for="show-sign-paths">Show Sign Paths</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-labels" checked>
+        <label for="show-labels">Show Labels</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-in-out-markers">
+        <label for="show-in-out-markers">Show Inside/Outside Markers</label>
+      </div>
+      <div class="viz-control-item">
+        <button id="clear-viz" style="width: 100%; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Clear All Visualizations
+        </button>
+      </div>
+    </div>
 
     <!-- Buttons Container -->
     <div class="btns-left-top">
@@ -304,8 +370,20 @@
         <ion-icon name="folder-open-outline"></ion-icon>
         <span>Import State</span>
       </button>
+      
+      <!-- Road Area Definition Button -->
+      <button id="define-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px;">
+        <ion-icon name="analytics-outline"></ion-icon>
+        <span>Define Road</span>
+      </button>
+      
+      <!-- Finish Road Definition Button (hidden by default) -->
+      <button id="finish-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px; display: none;">
+        <ion-icon name="checkmark-outline"></ion-icon>
+        <span>Set Road</span>
+      </button>
 
-      <!-- New Buttons for Polygon Selection -->
+      <!-- Construction Area Selection -->
       <button id="select-area-btn" class="flex-center btn-select">
         <ion-icon name="crop-outline"></ion-icon>
         <span>Select Area</span>
@@ -322,17 +400,6 @@
         <span>AI Check</span>
       </button>
       
-      <!-- Road Area Definition Button -->
-      <button id="define-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px;">
-        <ion-icon name="analytics-outline"></ion-icon>
-        <span>Define Road</span>
-      </button>
-      
-      <!-- Finish Road Definition Button (hidden by default) -->
-      <button id="finish-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px; display: none;">
-        <ion-icon name="checkmark-outline"></ion-icon>
-        <span>Set Road</span>
-      </button>
     </div>
 
     <!-- Hidden file input for importing state -->
@@ -469,6 +536,54 @@
       var roadDirection = 0; // degrees (0 = North, 90 = East, etc.)
       var definedRoadArea = null; // To store the defined road area
       var roadCoordinates = []; // Store the road coordinates for path calculation
+      
+      // Lane information variables
+      var roadLanes = 2; // Default to 2 lanes
+      var laneMarkers = [];
+      
+      // Standard TC-2 layout specification
+      const TC2_LAYOUT = {
+        "workAreaCorners": {
+          "topLeft": "Approach side, near centerline",
+          "topRight": "Departure side, near centerline",
+          "bottomLeft": "Approach side, near shoulder",
+          "bottomRight": "Departure side, near shoulder"
+        },
+        "roadReference": {
+          "trafficFlow": "Left to right",
+          "laneClosed": "Right lane"
+        },
+        "devices": [
+          {
+            "name": "TC-2",
+            "location": "Right shoulder (bottom), far upstream of work area"
+          },
+          {
+            "name": "TC-3",
+            "location": "Right shoulder (bottom), between TC-2 and the taper"
+          },
+          {
+            "name": "TC-31",
+            "location": "Right shoulder, near the start of the taper"
+          },
+          {
+            "name": "Arrow Board",
+            "location": "In the closed (right) lane, slightly upstream of the bottom-left corner"
+          },
+          {
+            "name": "RB-25L",
+            "location": "Right side, just past the taper, near top edge of the closed lane"
+          },
+          {
+            "name": "TC-5R",
+            "location": "At or near the bottom-left corner (approach side) of the work area"
+          },
+          {
+            "name": "Channelizing Devices",
+            "location": "Diagonal taper from bottom-right corner toward centerline"
+          }
+        ]
+      };
       
       // Constants from Winnipeg manual
       const REGULATIONS = {
@@ -721,6 +836,15 @@
         });
       }
 
+      // Global variables to store visualization elements so they can be toggled on/off
+      var vizElements = {
+        vectors: [],   // Direction vectors (road direction, sign placement, etc.)
+        edges: [],     // Edge vectors of the work zone
+        signPaths: [], // Paths from start point to each sign location
+        labels: [],    // Text labels for vectors, signs, etc.
+        markers: []    // Inside/outside markers and other markers
+      };
+      
       // Initialize the map with canvas rendering enabled
       var map = L.map("map", { preferCanvas: true }).setView([49.8033, -97.0823], 16);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -728,6 +852,122 @@
         maxNativeZoom: 19,
         maxZoom: 22
       }).addTo(map);
+      
+      // Initialize visualization controls
+      function initVizControls() {
+        // Show/hide direction vectors
+        document.getElementById('show-vectors').addEventListener('change', function() {
+          vizElements.vectors.forEach(elem => {
+            if (elem) {
+              if (elem.options && (elem.options.color || elem.options.fillColor)) {
+                // For polylines and polygons
+                if (this.checked) {
+                  elem.setStyle({opacity: 1, fillOpacity: 1});
+                } else {
+                  elem.setStyle({opacity: 0, fillOpacity: 0});
+                }
+              } else if (elem._icon) {
+                // For markers with icons
+                elem._icon.style.display = this.checked ? '' : 'none';
+              }
+            }
+          });
+        });
+        
+        // Show/hide edge vectors
+        document.getElementById('show-edge-vectors').addEventListener('change', function() {
+          vizElements.edges.forEach(elem => {
+            if (elem) {
+              if (elem.options && (elem.options.color || elem.options.fillColor)) {
+                // For polylines and polygons
+                if (this.checked) {
+                  elem.setStyle({opacity: 1, fillOpacity: 1});
+                } else {
+                  elem.setStyle({opacity: 0, fillOpacity: 0});
+                }
+              } else if (elem._icon) {
+                // For markers with icons
+                elem._icon.style.display = this.checked ? '' : 'none';
+              }
+            }
+          });
+        });
+        
+        // Show/hide sign paths
+        document.getElementById('show-sign-paths').addEventListener('change', function() {
+          vizElements.signPaths.forEach(elem => {
+            if (elem) {
+              if (elem.options && (elem.options.color || elem.options.fillColor)) {
+                // For polylines and polygons
+                if (this.checked) {
+                  elem.setStyle({opacity: 1, fillOpacity: 1});
+                } else {
+                  elem.setStyle({opacity: 0, fillOpacity: 0});
+                }
+              } else if (elem._icon) {
+                // For markers with icons
+                elem._icon.style.display = this.checked ? '' : 'none';
+              }
+            }
+          });
+        });
+        
+        // Show/hide labels
+        document.getElementById('show-labels').addEventListener('change', function() {
+          vizElements.labels.forEach(elem => {
+            if (elem) {
+              if (elem._icon) {
+                // For markers with icons (labels are usually markers with divIcons)
+                elem._icon.style.display = this.checked ? '' : 'none';
+              } else if (elem.options && (elem.options.color || elem.options.fillColor)) {
+                // For polylines and polygons (unlikely for labels but just in case)
+                if (this.checked) {
+                  elem.setStyle({opacity: 1, fillOpacity: 1});
+                } else {
+                  elem.setStyle({opacity: 0, fillOpacity: 0});
+                }
+              }
+            }
+          });
+        });
+        
+        // Show/hide inside/outside markers
+        document.getElementById('show-in-out-markers').addEventListener('change', function() {
+          vizElements.markers.forEach(elem => {
+            if (elem) {
+              if (elem.options && (elem.options.color || elem.options.fillColor)) {
+                // For circles and circleMarkers
+                if (this.checked) {
+                  elem.setStyle({opacity: 1, fillOpacity: 0.7});
+                } else {
+                  elem.setStyle({opacity: 0, fillOpacity: 0});
+                }
+              } else if (elem._icon) {
+                // For markers with icons
+                elem._icon.style.display = this.checked ? '' : 'none';
+              }
+            }
+          });
+        });
+        
+        // Clear all visualizations button
+        document.getElementById('clear-viz').addEventListener('click', clearVizElements);
+      }
+      
+      // Clear all visualization elements
+      function clearVizElements() {
+        Object.keys(vizElements).forEach(key => {
+          vizElements[key].forEach(elem => {
+            if (elem) {
+              map.removeLayer(elem);
+            }
+          });
+          vizElements[key] = [];
+        });
+      }
+      
+      // Initialize controls when the page loads
+      document.addEventListener('DOMContentLoaded', initVizControls);
 
       // (Optional) Load additional GeoJSON data.
       fetch("my_plan_latlon.geojson")
@@ -891,7 +1131,7 @@
       }
       
       // Function to check if a point is inside a polygon
-      function isPointInPolygon(point, polygon) {
+      function isPointInPolygon(point, polygon, visualize = false) {
         const latlngs = polygon.getLatLngs()[0];
         let inside = false;
         
@@ -902,6 +1142,41 @@
           const intersect = ((yi > point.lng) !== (yj > point.lng)) &&
                             (point.lat < (xj - xi) * (point.lng - yi) / (yj - yi) + xi);
           if (intersect) inside = !inside;
+        }
+        
+        // Optionally visualize the point we're checking
+        if (visualize && document.getElementById('show-in-out-markers').checked) {
+          const color = inside ? 'green' : 'red';
+          const circleRadius = 3;
+          
+          const pointMarker = L.circle([point.lat, point.lng], {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.7,
+            radius: circleRadius
+          }).addTo(map).bindTooltip(inside ? "Inside" : "Outside");
+          
+          // Store the marker so it can be toggled on/off
+          vizElements.markers.push(pointMarker);
+          
+          // Also highlight the polygon we're checking against
+          const originalStyle = {
+            color: polygon === definedRoadArea ? 'blue' : 'red',
+            weight: 2,
+            opacity: 1
+          };
+          
+          polygon.setStyle({
+            color: 'yellow',
+            weight: 3,
+            opacity: 0.7,
+            fillOpacity: 0.2
+          });
+          
+          // Reset style after 1.5 seconds
+          setTimeout(() => {
+            polygon.setStyle(originalStyle);
+          }, 1500);
         }
         
         return inside;
@@ -981,6 +1256,7 @@
         }
       });
 
+      
       // Function to analyze location for road type based on name/description
       function analyzeLocation(locationName) {
         // This is a simplistic analysis based on keywords - in a real AI implementation
@@ -1094,8 +1370,6 @@
             // AI analysis of the location
             const analyzedRoadType = analyzeLocation(centerResult.display_name);
             const analyzedWorkZoneType = determineWorkZoneType(query);
-            
-            // Ask if the user wants to designate this area as a construction zone.
             const designate = await customConfirm(
               `AI Analysis: ${centerResult.display_name} appears to be a ${analyzedRoadType} road.\n\nDo you want to designate this area as a construction zone?`
             );
@@ -1116,7 +1390,8 @@
               const defineRoad = await customConfirm("For optimal placement of traffic control elements, would you like to define the road area first?");
               
               if (defineRoad) {
-                // Start road drawing mode
+                // Ask for lane count before starting road drawing
+                roadLanes = await promptForLaneCount();
                 startRoadDrawing();
                 return; // Exit this flow and let the road drawing mode take over
               } else {
@@ -1234,7 +1509,8 @@
                     const defineRoad = await customConfirm("For optimal placement of traffic control elements, would you like to define the road area first?");
                     
                     if (defineRoad) {
-                      // Start road drawing mode
+                      // Ask for lane count before starting road drawing
+                      roadLanes = await promptForLaneCount();
                       startRoadDrawing();
                       return; // Exit this flow and let the road drawing mode take over
                     } else {
@@ -1557,23 +1833,40 @@
           await aiRecommendFixes(compliance.issues);
         }
       });
-      
-      // Event listeners for export/import buttons.
       document.getElementById("export-btn").addEventListener("click", exportState);
       document.getElementById("import-btn").addEventListener("click", function () {
         document.getElementById("import-input").click();
       });
 
+      // Function to prompt for lane count
+      function promptForLaneCount() {
+        return new Promise((resolve) => {
+          const laneCount = prompt("How many lanes does this road have? (total in both directions)", "2");
+          
+          // Parse and validate lane count (must be a positive integer)
+          const numLanes = parseInt(laneCount);
+          if (!isNaN(numLanes) && numLanes > 0) {
+            resolve(numLanes);
+          } else {
+            alert("Please enter a valid number of lanes (positive integer).");
+            resolve(2); // Default to 2 lanes if invalid input
+          }
+        });
+      }
+      
       // Enable road area drawing mode
-      document.getElementById("define-road-btn").addEventListener("click", function () {
+      document.getElementById("define-road-btn").addEventListener("click", async function () {
         // If we already have a defined road, ask to confirm replacement
         if (definedRoadArea) {
-          customConfirm("You already have a defined road area. Do you want to replace it?").then(function(result) {
-            if (result) {
-              startRoadDrawing();
-            }
-          });
+          const result = await customConfirm("You already have a defined road area. Do you want to replace it?");
+          if (result) {
+            // Ask for lane count before starting road drawing
+            roadLanes = await promptForLaneCount();
+            startRoadDrawing();
+          }
         } else {
+          // Ask for lane count before starting road drawing
+          roadLanes = await promptForLaneCount();
           startRoadDrawing();
         }
       });
@@ -1605,7 +1898,7 @@
         document.getElementById("define-road-btn").style.display = "none";
         document.getElementById("finish-road-btn").style.display = "inline-flex";
         
-        alert("Road definition mode activated. Click on the map to add points defining the road area boundary. Click 'Set Road' when finished.");
+        alert(`Road definition mode activated for a ${roadLanes}-lane road. Click on the map to add points defining the road area boundary. Click 'Set Road' when finished.`);
       }
       
       // Event listener for the finish road button
@@ -1659,26 +1952,28 @@
           // Style the road layer to indicate it's now defined
           currentRoadLayer.setStyle({color: '#0d9488', fillOpacity: 0.3, weight: 3});
           
-          // Add a label to the road
+          // Add a label to the road including lane count
           const center = currentRoadLayer.getBounds().getCenter();
           L.marker(center, {
             icon: L.divIcon({
               className: 'road-label',
-              html: `<div style="background: rgba(255,255,255,0.7); padding: 3px; border-radius: 3px; color: #0d9488; font-weight: bold;">Road Direction: ${roadDirection}°</div>`,
-              iconSize: [100, 20],
-              iconAnchor: [50, 10]
+              html: `<div style="background: rgba(255,255,255,0.7); padding: 3px; border-radius: 3px; color: #0d9488; font-weight: bold;">
+                      ${roadLanes}-Lane Road | Direction: ${roadDirection}°
+                     </div>`,
+              iconSize: [150, 20],
+              iconAnchor: [75, 10]
             })
           }).addTo(map);
           
-          // Create popup to show the road direction
+          // Create popup to show the road information
           L.popup()
             .setLatLng(center)
-            .setContent(`Road area defined with direction: ${roadDirection}°`)
+            .setContent(`${roadLanes}-lane road defined with direction: ${roadDirection}°`)
             .openOn(map);
             
           currentRoadPoints = [];
           
-          alert("Road area defined successfully. The traffic control elements will be placed within this area.");
+          alert(`${roadLanes}-lane road area defined successfully. The traffic control elements will be placed within this area.`);
         } else {
           // User canceled, stay in road drawing mode
           alert("Road direction selection canceled. Continue adding points or click 'Set Road' when finished.");
@@ -1724,12 +2019,10 @@
         const bounds = polygon.getBounds();
         const center = bounds.getCenter();
         
-        // For simplicity, we'll use the first point of the polygon as a reference
-        // to determine orientation if no road direction is defined
+        // Get the corners of the work area (polygon)
         const polygonPoints = polygon.getLatLngs()[0];
         
-        // Determine road direction - use the defined road direction if available,
-        // otherwise calculate from the polygon
+        // Use the road direction if defined
         let bearing = roadDirection;
         if (bearing === 0 && polygonPoints.length > 1) {
           bearing = calculateBearing(
@@ -1744,10 +2037,7 @@
         const zoneConfig = REGULATIONS.workZoneTypes[workZoneType];
         const roadConfig = REGULATIONS.roadTypes[roadType];
         
-        // Calculate buffer zone for the road type
-        const bufferDistance = roadConfig.bufferZone;
-        
-        // Create an array to hold all the new markers
+        // Arrays to track markers
         const newMarkers = [];
         const placedMarkers = [];
         
@@ -1755,11 +2045,16 @@
         function tryPlaceMarker(lat, lng, label) {
           // Check if inside the road area if one is defined
           if (definedRoadArea) {
-            if (isPointInPolygon({lat, lng}, definedRoadArea)) {
+            // Use the visualize parameter to debug placement issues
+            const pointIsInRoad = isPointInPolygon({lat, lng}, definedRoadArea, true);
+            
+            if (pointIsInRoad) {
               const marker = createInteractiveMarker(lat, lng, label);
               placedMarkers.push(marker);
               return marker;
             }
+            // Add a debug message when a marker can't be placed
+            console.log(`Can't place ${label} at [${lat}, ${lng}] - outside road area`);
             return null;
           } else {
             // If no road area defined, place marker without restrictions
@@ -1769,200 +2064,362 @@
           }
         }
         
-        // 1. Add the main construction zone marker at the center
-        const mainMarker = tryPlaceMarker(
-          center.lat, 
-          center.lng, 
-          `${zoneConfig.name} (${roadConfig.speedLimit} km/h zone)`
-        );
+        // Use vector-based approach for sign placement
+        console.log("Using vector-based approach for sign placement");
         
-        if (mainMarker) {
-          newMarkers.push(mainMarker);
+        // 1. Create a vector from the direction specified by the user
+        // Convert degrees to radians for calculations
+        // In mapping, 0° is north, 90° is east, etc., but in vector math:
+        // - x increases to the east (90°)
+        // - y increases to the north (0°)
+        const bearingRad = (bearing * Math.PI) / 180;
+        const v1 = {
+          // For a bearing angle, x is sin(angle) and y is cos(angle)
+          // But we need to negate y because map coordinates increase southward
+          x: Math.sin(bearingRad),
+          y: -Math.cos(bearingRad)  // Negative because y increases southward on maps
+        };
+        
+        // 2. Analyze the work zone polygon to find the edge that best aligns with the road direction
+        // Extract actual corner points from the polygon
+        const corners = polygonPoints;
+        
+        // Need at least 3 points to form a polygon
+        if (corners.length < 3) {
+          console.error("Work zone doesn't have enough points");
+          
+          // Add label at center and return
+          const mainMarker = tryPlaceMarker(
+            center.lat, center.lng, 
+            `Work Zone (${roadLanes} lanes) - Need more points`
+          );
+          if (mainMarker) newMarkers.push(mainMarker);
+          
+          return newMarkers;
         }
         
-        // 2. Add required signs based on work zone type
-        zoneConfig.requiredSigns.forEach(signKey => {
-          const sign = REGULATIONS.signs[signKey];
+        // 3. Compute vectors between adjacent corners
+        const vectors = [];
+        for (let i = 0; i < corners.length; i++) {
+          const p1 = corners[i];
+          const p2 = corners[(i + 1) % corners.length];
           
-          // Apply road type multiplier to distance
-          const adjustedDistance = sign.distance * roadConfig.signageMultiplier;
+          // Create a vector from p1 to p2
+          const vector = {
+            p1: p1,
+            p2: p2,
+            dx: p2.lng - p1.lng,
+            dy: p2.lat - p1.lat
+          };
           
-          // Try multiple positions along the road to find a valid placement
-          // First, try the standard position
-          let upstreamPoint = calculateDestination(
-            center.lat, 
-            center.lng, 
-            adjustedDistance, 
-            (bearing + 180) % 360 // upstream (opposite of bearing)
-          );
+          // Normalize the vector
+          const length = Math.sqrt(vector.dx * vector.dx + vector.dy * vector.dy);
+          vector.dx = vector.dx / length;
+          vector.dy = vector.dy / length;
           
-          // If a road area is defined, try different distances until we find a valid point
-          if (definedRoadArea && !isPointInPolygon(upstreamPoint, definedRoadArea)) {
-            let found = false;
-            
-            // Try shorter distances until we find a valid point
-            for (let factor = 0.9; factor >= 0.3; factor -= 0.1) {
-              const testPoint = calculateDestination(
-                center.lat, 
-                center.lng, 
-                adjustedDistance * factor, 
-                (bearing + 180) % 360
-              );
-              
-              if (isPointInPolygon(testPoint, definedRoadArea)) {
-                upstreamPoint = testPoint;
-                found = true;
-                break;
-              }
-            }
-            
-            // If still not found, try points perpendicular to the road
-            if (!found) {
-              const perpDirections = [(bearing + 90) % 360, (bearing + 270) % 360];
-              
-              for (let perpDir of perpDirections) {
-                const testPoint = calculateDestination(
-                  center.lat, 
-                  center.lng, 
-                  30, // shorter distance for perpendicular
-                  perpDir
-                );
-                
-                if (isPointInPolygon(testPoint, definedRoadArea)) {
-                  upstreamPoint = testPoint;
-                  found = true;
-                  break;
-                }
-              }
-            }
-          }
+          vectors.push(vector);
+        }
+        
+        // 4. Find the vector that best aligns with v1 using dot product (cosine similarity)
+        let bestAlignment = -Infinity;
+        let bestVector = null;
+        let bestVectorIndex = -1;
+        
+        vectors.forEach((vector, index) => {
+          // Calculate dot product (v1 • v2)
+          const dotProduct = (v1.x * vector.dx) + (v1.y * vector.dy);
           
-          // Add the sign if we have a valid position
-          const signMarker = tryPlaceMarker(
-            upstreamPoint.lat, 
-            upstreamPoint.lng, 
-            `${sign.name} Sign (${signKey}) - ${adjustedDistance.toFixed(0)}m from work zone`
-          );
+          // We actually want the vector aligned with or opposite to v1
+          const alignment = Math.abs(dotProduct);
           
-          if (signMarker) {
-            newMarkers.push(signMarker);
-          }
-          
-          // For signs that should be on both ends (like TC-4 End Construction)
-          if (signKey === "TC-4") {
-            let downstreamPoint = calculateDestination(
-              center.lat, 
-              center.lng, 
-              adjustedDistance, 
-              bearing // downstream (same as bearing)
-            );
-            
-            // Like above, try to find a valid position if using road area
-            if (definedRoadArea && !isPointInPolygon(downstreamPoint, definedRoadArea)) {
-              let found = false;
-              
-              for (let factor = 0.9; factor >= 0.3; factor -= 0.1) {
-                const testPoint = calculateDestination(
-                  center.lat, 
-                  center.lng, 
-                  adjustedDistance * factor, 
-                  bearing
-                );
-                
-                if (isPointInPolygon(testPoint, definedRoadArea)) {
-                  downstreamPoint = testPoint;
-                  found = true;
-                  break;
-                }
-              }
-              
-              if (!found) {
-                // Try different angles
-                for (let angle = 15; angle <= 45; angle += 15) {
-                  const testPoint1 = calculateDestination(
-                    center.lat, 
-                    center.lng, 
-                    adjustedDistance * 0.5, 
-                    (bearing + angle) % 360
-                  );
-                  
-                  const testPoint2 = calculateDestination(
-                    center.lat, 
-                    center.lng, 
-                    adjustedDistance * 0.5, 
-                    (bearing - angle) % 360
-                  );
-                  
-                  if (isPointInPolygon(testPoint1, definedRoadArea)) {
-                    downstreamPoint = testPoint1;
-                    found = true;
-                    break;
-                  }
-                  
-                  if (isPointInPolygon(testPoint2, definedRoadArea)) {
-                    downstreamPoint = testPoint2;
-                    found = true;
-                    break;
-                  }
-                }
-              }
-            }
-            
-            const endSignMarker = tryPlaceMarker(
-              downstreamPoint.lat, 
-              downstreamPoint.lng, 
-              `${sign.name} Sign (${signKey}) - End of work zone`
-            );
-            
-            if (endSignMarker) {
-              newMarkers.push(endSignMarker);
-            }
+          if (alignment > bestAlignment) {
+            bestAlignment = alignment;
+            bestVector = vector;
+            bestVectorIndex = index;
           }
         });
         
-        // 3. Add pylons/cones around the perimeter
-        // We'll now place them only along the road edge
-        const coneSpacing = zoneConfig.coneSpacing;
+        // Marker to show the work area
+        const workZoneMarker = tryPlaceMarker(
+          center.lat, center.lng, 
+          `Work Zone (${roadConfig.speedLimit} km/h, ${roadLanes} lanes)`
+        );
+        if (workZoneMarker) newMarkers.push(workZoneMarker);
         
-        // If we have a defined road area, use its perimeter for placing cones
-        if (definedRoadArea) {
-          const roadPoints = definedRoadArea.getLatLngs()[0];
+        // If we found a well-aligned vector
+        if (bestVector) {
+          // Determine the actual direction of traffic based on the sign convention
+          // dot product > 0 means vectors point in similar direction
+          const dotProduct = (v1.x * bestVector.dx) + (v1.y * bestVector.dy);
           
-          for (let i = 0; i < roadPoints.length; i++) {
-            const p1 = roadPoints[i];
-            const p2 = roadPoints[(i + 1) % roadPoints.length];
+          // Determine the starting point for sign placement
+          // We'll use the second point (p2) of the best vector as our reference
+          const startPoint = bestVector.p2;
+          
+          // Function to create an arrow for vector visualization
+          function createArrow(startLat, startLng, vector, length, color, name, type = 'vector') {
+            // Calculate the end point based on the vector direction
+            const endLat = startLat + vector.y * length;
+            const endLng = startLng + vector.x * length;
             
-            // Calculate distance between points
-            const segmentDistance = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-            const segmentBearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+            // Create the line
+            const line = L.polyline([
+              [startLat, startLng],
+              [endLat, endLng]
+            ], {color: color, weight: 4}).addTo(map);
             
-            // Determine number of cones for this segment
-            const numCones = Math.max(2, Math.floor(segmentDistance / coneSpacing));
+            // Create arrowhead
+            const headLength = length * 0.2;
+            const headAngle = Math.atan2(vector.y, vector.x);
             
-            // Place cones along the segment
-            for (let j = 0; j <= numCones; j++) {
-              // Skip the start point of segments after the first to avoid duplicates
-              if (j === 0 && i > 0) continue;
+            // Calculate arrowhead points
+            const head1Lat = endLat - headLength * Math.cos(headAngle - Math.PI/6);
+            const head1Lng = endLng - headLength * Math.sin(headAngle - Math.PI/6);
+            
+            const head2Lat = endLat - headLength * Math.cos(headAngle + Math.PI/6);
+            const head2Lng = endLng - headLength * Math.sin(headAngle + Math.PI/6);
+            
+            // Draw arrowhead as a polygon
+            const arrowhead = L.polygon([
+              [endLat, endLng],
+              [head1Lat, head1Lng],
+              [head2Lat, head2Lng]
+            ], {color: color, fillColor: color, fillOpacity: 1}).addTo(map);
+            
+            // Add label
+            const label = L.marker([startLat, startLng], {
+              icon: L.divIcon({
+                className: 'vector-label',
+                html: `<div style="background: rgba(255,255,255,0.8); padding: 3px; border-radius: 3px; color: ${color}; font-weight: bold;">${name}</div>`,
+                iconSize: [150, 20],
+                iconAnchor: [0, 10]
+              })
+            }).addTo(map);
+            
+            // Store created elements in the appropriate arrays for toggling visibility
+            if (type === 'vector') {
+              vizElements.vectors.push(line);
+              vizElements.vectors.push(arrowhead);
+              vizElements.labels.push(label);
+            } else if (type === 'edge') {
+              vizElements.edges.push(line);
+              vizElements.edges.push(arrowhead);
+              vizElements.labels.push(label);
+            }
+            
+            return {line, arrowhead, label};
+          }
+          
+          // Scale for better visualization (adjust if needed)
+          const vectorScale = 0.003;
+          
+          // 1. Visualize the road direction vector (v1) - WHITE
+          createArrow(center.lat, center.lng, v1, vectorScale, 'white', 'Road Direction', 'vector');
+          
+          // 2. Visualize the best aligned vector - BLUE
+          const bestVectorDir = {
+            x: bestVector.dx,
+            y: bestVector.dy
+          };
+          createArrow(bestVector.p1.lat, bestVector.p1.lng, bestVectorDir, vectorScale, 'blue', 'Best Aligned Edge', 'vector');
+          
+          // 3. Calculate perpendicular vector for sign placement - RED
+          // Make sure the perpendicular vector points toward the road area (not away from it)
+          // We need to check both possible perpendicular vectors
+          const perpVector1 = {
+            x: -bestVector.dy, // Perpendicular option 1: (-dy, dx)
+            y: bestVector.dx
+          };
+          
+          const perpVector2 = {
+            x: bestVector.dy, // Perpendicular option 2: (dy, -dx)
+            y: -bestVector.dx
+          };
+          
+          // Test points in both directions to see which is more likely to be in the road
+          const testDist = 0.0005; // Small test distance
+          const testPoint1 = {
+            lat: startPoint.lat + perpVector1.y * testDist,
+            lng: startPoint.lng + perpVector1.x * testDist
+          };
+          
+          const testPoint2 = {
+            lat: startPoint.lat + perpVector2.y * testDist,
+            lng: startPoint.lng + perpVector2.x * testDist
+          };
+          
+          // Determine which perpendicular vector to use
+          let perpVector = perpVector1;
+          let perpColorName = 'red';
+          
+          // If we have a road area, check which point is inside it
+          if (definedRoadArea) {
+            const isPoint1InRoad = isPointInPolygon(testPoint1, definedRoadArea);
+            const isPoint2InRoad = isPointInPolygon(testPoint2, definedRoadArea);
+            
+            // If one point is in the road and the other isn't, choose the one in the road
+            if (isPoint1InRoad && !isPoint2InRoad) {
+              perpVector = perpVector1;
+              console.log("Using perpendicular vector 1 (inside road)");
+            } else if (!isPoint1InRoad && isPoint2InRoad) {
+              perpVector = perpVector2;
+              perpColorName = 'darkred';
+              console.log("Using perpendicular vector 2 (inside road)");
+            } else {
+              // If both or neither are in the road, use dot product with road direction
+              // to determine which is more aligned with the intended direction
+              const dot1 = (perpVector1.x * v1.x) + (perpVector1.y * v1.y);
+              const dot2 = (perpVector2.x * v1.x) + (perpVector2.y * v1.y);
               
-              const distance = j * (segmentDistance / numCones);
-              const conePoint = calculateDestination(p1.lat, p1.lng, distance, segmentBearing);
-              
-              // Only place if inside construction zone
-              if (isPointInPolygon(conePoint, polygon)) {
-                const coneMarker = tryPlaceMarker(
-                  conePoint.lat, 
-                  conePoint.lng, 
-                  "Traffic Cone"
-                );
-                
-                if (coneMarker) {
-                  newMarkers.push(coneMarker);
-                }
+              if (Math.abs(dot1) < Math.abs(dot2)) {
+                perpVector = perpVector1;
+                console.log("Using perpendicular vector 1 (better aligned)");
+              } else {
+                perpVector = perpVector2;
+                perpColorName = 'darkred';
+                console.log("Using perpendicular vector 2 (better aligned)");
               }
             }
           }
-        } else {
-          // If no road area defined, place cones around the construction zone perimeter
+          
+          // Visualize the chosen perpendicular vector
+          createArrow(startPoint.lat, startPoint.lng, perpVector, vectorScale, perpColorName, 'Sign Placement Direction', 'vector');
+          
+          // Show the alternative perpendicular vector in a lighter color
+          const altPerpVector = (perpVector === perpVector1) ? perpVector2 : perpVector1;
+          createArrow(startPoint.lat, startPoint.lng, altPerpVector, vectorScale * 0.5, 'pink', 'Alternative Direction', 'vector');
+          
+          // Update the signDirRad and signDirDeg to match our chosen perpendicular vector
+          const signDirRad = Math.atan2(perpVector.y, perpVector.x);
+          const signDirDeg = (signDirRad * 180 / Math.PI + 360) % 360;
+          
+          // Skip the original signDirRad calculation which will be overwritten
+          
+          // 4 & 5. Visualize other vectors (not best aligned) in gray
+          vectors.forEach((vector, index) => {
+            if (index !== bestVectorIndex) {
+              const grayVector = {
+                x: vector.dx,
+                y: vector.dy
+              };
+              createArrow(vector.p1.lat, vector.p1.lng, grayVector, vectorScale * 0.75, '#888888', `Edge ${index+1}`, 'edge');
+            }
+          });
+          
+          // Calculate the spacing between signs (evenly spaced)
+          const totalSignDistance = 150; // Place signs over 150 meters
+          const numSigns = 4; // Four signs to place: TC-63, RB-25L, TC-5R, TC-2
+          const signSpacing = totalSignDistance / (numSigns - 1);
+          
+          // We already calculated signDirRad and signDirDeg above using the perpendicular vector
+          
+          // Sign placements in the specified order
+          const signs = [
+            { name: "TC-63", label: "Channelization Barrel", distance: 0 },
+            { name: "RB-25L", label: "Keep Left Sign", distance: signSpacing },
+            { name: "TC-5R", label: "Barricade - Right Corner", distance: signSpacing * 2 },
+            { name: "TC-2", label: "Roadwork Sign", distance: signSpacing * 3 }
+          ];
+          
+          // Color-code sign placement for visualization
+          const signColors = ['purple', 'orange', 'cyan', 'magenta'];
+          
+          // Place each sign with visualizations
+          signs.forEach((sign, index) => {
+            const signPoint = calculateDestination(
+              startPoint.lat, startPoint.lng,
+              sign.distance, signDirDeg
+            );
+            
+            // Create an arrow for each sign placement
+            const signArrow = L.polyline([
+              [startPoint.lat, startPoint.lng],
+              [signPoint.lat, signPoint.lng]
+            ], {color: signColors[index], weight: 3}).addTo(map);
+            
+            // Add to signPaths array for toggling visibility
+            vizElements.signPaths.push(signArrow);
+            
+            // Add a prominent marker to show exactly where the sign would be placed
+            const signLocationMarker = L.circleMarker([signPoint.lat, signPoint.lng], {
+              color: 'black',
+              fillColor: signColors[index],
+              fillOpacity: 0.8,
+              radius: 8,
+              weight: 2
+            }).addTo(map).bindTooltip(`${sign.name} placement point`);
+            
+            // Add to markers array
+            vizElements.markers.push(signLocationMarker);
+            
+            // Add a label for the sign
+            const signLabel = L.marker([signPoint.lat, signPoint.lng], {
+              icon: L.divIcon({
+                className: 'sign-label',
+                html: `<div style="background: rgba(255,255,255,0.9); padding: 5px; border-radius: 5px; border: 2px solid ${signColors[index]}; color: black; font-weight: bold;">${sign.name} - ${sign.label}<br>${Math.round(sign.distance)}m from start</div>`,
+                iconSize: [200, 40],
+                iconAnchor: [100, 40]
+              })
+            }).addTo(map);
+            
+            // Add to labels array
+            vizElements.labels.push(signLabel);
+            
+            // Visualize the inside/outside status of this point
+            if (definedRoadArea) {
+              // This will add visual indicators (green/red circles) for each point
+              const isInsideRoad = isPointInPolygon({lat: signPoint.lat, lng: signPoint.lng}, definedRoadArea, true);
+              console.log(`${sign.name} is ${isInsideRoad ? 'INSIDE' : 'OUTSIDE'} road area`);
+            }
+            
+            // Try to place the actual marker
+            const signMarker = tryPlaceMarker(
+              signPoint.lat, signPoint.lng,
+              `${sign.name} - ${sign.label} (${Math.round(sign.distance)}m)`
+            );
+            
+            if (signMarker) {
+              newMarkers.push(signMarker);
+              // Add custom class to the marker for visibility
+              const icon = signMarker.getIcon();
+              const newIcon = L.icon({
+                iconUrl: icon.options.iconUrl,
+                iconSize: [30, 45], // Make it larger
+                iconAnchor: [15, 45],
+                popupAnchor: [0, -45],
+                className: 'highlighted-marker'
+              });
+              signMarker.setIcon(newIcon);
+            } else {
+              // If marker couldn't be placed, show a clear warning
+              const warningMarker = L.marker([signPoint.lat, signPoint.lng], {
+                icon: L.divIcon({
+                  className: 'warning-label',
+                  html: `<div style="background: rgba(255,0,0,0.9); padding: 5px; border-radius: 5px; color: white; font-weight: bold;">⚠️ ${sign.name} - Outside Road Area</div>`,
+                  iconSize: [170, 40],
+                  iconAnchor: [85, 20]
+                })
+              }).addTo(map);
+              
+              // Add to labels array
+              vizElements.labels.push(warningMarker);
+            }
+          });
+          
+          // Place markers at each corner of the work zone for clarity
+          corners.forEach((corner, index) => {
+            const cornerMarker = tryPlaceMarker(
+              corner.lat, corner.lng,
+              `Corner ${index + 1}${index === bestVectorIndex ? " (Start)" : ""}`
+            );
+            
+            if (cornerMarker) newMarkers.push(cornerMarker);
+          });
+          
+          // Add additional cones around the work zone perimeter
+          const coneSpacing = zoneConfig.coneSpacing;
+          
+          // Place cones around the construction zone perimeter
           for (let i = 0; i < polygonPoints.length; i++) {
             const p1 = polygonPoints[i];
             const p2 = polygonPoints[(i + 1) % polygonPoints.length];
@@ -1992,20 +2449,6 @@
                 newMarkers.push(coneMarker);
               }
             }
-          }
-        }
-        
-        // 4. Add channelization barrels at key points
-        // For simplicity, we'll place barrels at polygon vertices that are inside the road area
-        for (let i = 0; i < polygonPoints.length; i++) {
-          const barrelMarker = tryPlaceMarker(
-            polygonPoints[i].lat, 
-            polygonPoints[i].lng, 
-            "Channelization Barrel (TC-63)"
-          );
-          
-          if (barrelMarker) {
-            newMarkers.push(barrelMarker);
           }
         }
         
