@@ -321,6 +321,18 @@
         <ion-icon name="shield-checkmark-outline"></ion-icon>
         <span>AI Check</span>
       </button>
+      
+      <!-- Road Area Definition Button -->
+      <button id="define-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px;">
+        <ion-icon name="analytics-outline"></ion-icon>
+        <span>Define Road</span>
+      </button>
+      
+      <!-- Finish Road Definition Button (hidden by default) -->
+      <button id="finish-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px; display: none;">
+        <ion-icon name="checkmark-outline"></ion-icon>
+        <span>Set Road</span>
+      </button>
     </div>
 
     <!-- Hidden file input for importing state -->
@@ -395,6 +407,44 @@
         </div>
       </div>
     </div>
+    
+    <!-- Road Direction Modal -->
+    <div id="road-direction-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p>Select Road Direction</p>
+        <div style="padding: 15px 0;">
+          <div style="display: flex; justify-content: center; position: relative; width: 200px; height: 200px; margin: 0 auto;">
+            <!-- Direction Compass -->
+            <div style="position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333; display: flex; justify-content: center; align-items: center;">
+              <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%);">N</div>
+              <div style="position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);">S</div>
+              <div style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%);">W</div>
+              <div style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%);">E</div>
+              
+              <!-- Direction Arrow (will be rotated via JavaScript) -->
+              <div id="direction-arrow" style="width: 80%; height: 4px; background-color: #e74c3c; transform-origin: center; transform: rotate(0deg);">
+                <div style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 15px solid #e74c3c; position: absolute; right: -10px; top: -5px; transform: rotate(90deg);"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: center; margin-top: 15px;">
+            <input type="range" id="direction-slider" min="0" max="359" value="0" style="width: 100%;">
+          </div>
+          <div style="text-align: center; margin-top: 5px;">
+            Direction: <span id="direction-value">0°</span>
+          </div>
+        </div>
+        <div class="custom-modal-buttons">
+          <button id="road-direction-save">
+            <ion-icon name="checkmark-outline"></ion-icon> Save Direction
+          </button>
+          <button id="road-direction-cancel">
+            <ion-icon name="close-outline"></ion-icon> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <!-- Load leaflet-image plugin -->
@@ -411,6 +461,14 @@
       
       // Flag to indicate if the polygon options modal is open
       var polygonModalOpen = false;
+      
+      // Variables for road area drawing
+      var roadDrawingMode = false;
+      var currentRoadPoints = [];
+      var currentRoadLayer = null;
+      var roadDirection = 0; // degrees (0 = North, 90 = East, etc.)
+      var definedRoadArea = null; // To store the defined road area
+      var roadCoordinates = []; // Store the road coordinates for path calculation
       
       // Constants from Winnipeg manual
       const REGULATIONS = {
@@ -781,10 +839,118 @@
         };
       }
 
-      // Modify the map click event to support both marker and polygon drawing.
+      // Function to open the road direction selection modal
+      function openRoadDirectionModal(initialDirection = 0) {
+        return new Promise((resolve) => {
+          const modal = document.getElementById("road-direction-modal");
+          const slider = document.getElementById("direction-slider");
+          const directionValue = document.getElementById("direction-value");
+          const directionArrow = document.getElementById("direction-arrow");
+          const saveButton = document.getElementById("road-direction-save");
+          const cancelButton = document.getElementById("road-direction-cancel");
+          
+          // Set initial direction if provided
+          if (initialDirection !== 0) {
+            // Normalize to 0-359 range
+            initialDirection = Math.round(initialDirection) % 360;
+            if (initialDirection < 0) initialDirection += 360;
+            
+            slider.value = initialDirection;
+            directionValue.textContent = initialDirection + "°";
+            directionArrow.style.transform = `rotate(${initialDirection}deg)`;
+          }
+          
+          // Update direction display when slider is moved
+          slider.oninput = function() {
+            const direction = parseInt(this.value);
+            directionValue.textContent = direction + "°";
+            directionArrow.style.transform = `rotate(${direction}deg)`;
+          };
+          
+          modal.style.display = "flex";
+          
+          function cleanUp() {
+            modal.style.display = "none";
+            saveButton.removeEventListener("click", onSave);
+            cancelButton.removeEventListener("click", onCancel);
+          }
+          
+          function onSave() {
+            cleanUp();
+            resolve(parseInt(slider.value));
+          }
+          
+          function onCancel() {
+            cleanUp();
+            resolve(null);
+          }
+          
+          saveButton.addEventListener("click", onSave);
+          cancelButton.addEventListener("click", onCancel);
+        });
+      }
+      
+      // Function to check if a point is inside a polygon
+      function isPointInPolygon(point, polygon) {
+        const latlngs = polygon.getLatLngs()[0];
+        let inside = false;
+        
+        for (let i = 0, j = latlngs.length - 1; i < latlngs.length; j = i++) {
+          const xi = latlngs[i].lat, yi = latlngs[i].lng;
+          const xj = latlngs[j].lat, yj = latlngs[j].lng;
+          
+          const intersect = ((yi > point.lng) !== (yj > point.lng)) &&
+                            (point.lat < (xj - xi) * (point.lng - yi) / (yj - yi) + xi);
+          if (intersect) inside = !inside;
+        }
+        
+        return inside;
+      }
+      
+      // Function to place a marker only if it's inside the road area
+      function placeMarkerIfInRoad(lat, lon, label) {
+        if (!definedRoadArea) {
+          createInteractiveMarker(lat, lon, label);
+          return true;
+        }
+        
+        // Check if the marker position is inside the road area
+        if (isPointInPolygon({lat, lng: lon}, definedRoadArea)) {
+          createInteractiveMarker(lat, lon, label);
+          return true;
+        }
+        
+        return false; // Marker was not placed because it's outside the road
+      }
+      
+      // Modify the map click event to support marker, polygon, and road area drawing.
       map.on("click", async function (e) {
         // If the polygon options modal is open, do nothing.
         if (polygonModalOpen) return;
+        
+        // If road drawing mode is active, add points to road polygon
+        if (roadDrawingMode) {
+          currentRoadPoints.push(e.latlng);
+          
+          // Add a visual marker for the point
+          L.circleMarker(e.latlng, {radius: 5, color: 'blue'}).addTo(map);
+          
+          // Update the polygon as points are added
+          if (currentRoadPoints.length > 1) {
+            if (currentRoadLayer) {
+              currentRoadLayer.setLatLngs(currentRoadPoints);
+            } else {
+              // Create the polygon and add it to the map
+              currentRoadLayer = L.polygon(currentRoadPoints, { 
+                color: 'blue', 
+                fillOpacity: 0.2, 
+                weight: 2 
+              }).addTo(map);
+            }
+          }
+          
+          return; // Skip marker confirmation when drawing road
+        }
         
         // If polygon drawing mode is active, add point to current polygon.
         if (polygonDrawingMode) {
@@ -796,16 +962,22 @@
           }
           return; // Skip marker confirmation when drawing polygon.
         }
+        
         // Otherwise, prompt to add a new marker.
         const addPin = await customConfirm("Do you want to add a new pin here?");
         if (addPin) {
           const lat = e.latlng.lat;
           const lon = e.latlng.lng;
-          createInteractiveMarker(
-            lat,
-            lon,
-            "Pin dropped at: " + lat.toFixed(5) + ", " + lon.toFixed(5)
-          ).openPopup();
+          
+          if (definedRoadArea && !isPointInPolygon({lat, lng: lon}, definedRoadArea)) {
+            alert("Cannot place marker outside the defined road area. Please place markers within the road boundaries.");
+          } else {
+            createInteractiveMarker(
+              lat,
+              lon,
+              "Pin dropped at: " + lat.toFixed(5) + ", " + lon.toFixed(5)
+            ).openPopup();
+          }
         }
       });
 
@@ -936,12 +1108,25 @@
               return;
             }
             
-            // Determine road bearing (direction) - simplified for demo
-            // In reality, we would use road network data to determine actual road direction
-            const bearing = 45; // Default 45 degrees (NE)
+            // For road direction, check if we have a defined road area
+            let useRoadDirection = roadDirection;
+            
+            // If we don't have a defined road direction, prompt the user to define a road area first
+            if (!definedRoadArea) {
+              const defineRoad = await customConfirm("For optimal placement of traffic control elements, would you like to define the road area first?");
+              
+              if (defineRoad) {
+                // Start road drawing mode
+                startRoadDrawing();
+                return; // Exit this flow and let the road drawing mode take over
+              } else {
+                // Use a default bearing if the user doesn't want to define a road
+                useRoadDirection = 45; // Default 45 degrees (NE)
+              }
+            }
             
             // Create construction zone polygon
-            const constructionZone = createConstructionZonePolygon(centerLat, centerLon, analyzedRoadType, bearing);
+            const constructionZone = createConstructionZonePolygon(centerLat, centerLon, analyzedRoadType, useRoadDirection);
             constructionZone.addTo(map);
             
             // Add click handler for the polygon
@@ -1041,12 +1226,25 @@
                     return;
                   }
                   
-                  // Determine road bearing (direction) - simplified for demo
-                  // In reality, we would use road network data to determine actual road direction
-                  const bearing = 45; // Default 45 degrees (NE)
+                  // For road direction, check if we have a defined road area
+                  let useRoadDirection = roadDirection;
+                  
+                  // If we don't have a defined road direction, prompt the user to define a road area first
+                  if (!definedRoadArea) {
+                    const defineRoad = await customConfirm("For optimal placement of traffic control elements, would you like to define the road area first?");
+                    
+                    if (defineRoad) {
+                      // Start road drawing mode
+                      startRoadDrawing();
+                      return; // Exit this flow and let the road drawing mode take over
+                    } else {
+                      // Use a default bearing if the user doesn't want to define a road
+                      useRoadDirection = 45; // Default 45 degrees (NE)
+                    }
+                  }
                   
                   // Create construction zone polygon
-                  const constructionZone = createConstructionZonePolygon(lat, lon, analyzedRoadType, bearing);
+                  const constructionZone = createConstructionZonePolygon(lat, lon, analyzedRoadType, useRoadDirection);
                   constructionZone.addTo(map);
                   
                   // Add click handler for the polygon
@@ -1366,19 +1564,159 @@
         document.getElementById("import-input").click();
       });
 
+      // Enable road area drawing mode
+      document.getElementById("define-road-btn").addEventListener("click", function () {
+        // If we already have a defined road, ask to confirm replacement
+        if (definedRoadArea) {
+          customConfirm("You already have a defined road area. Do you want to replace it?").then(function(result) {
+            if (result) {
+              startRoadDrawing();
+            }
+          });
+        } else {
+          startRoadDrawing();
+        }
+      });
+      
+      // Function to start road drawing mode
+      function startRoadDrawing() {
+        // Exit polygon drawing mode if active
+        if (polygonDrawingMode) {
+          polygonDrawingMode = false;
+          document.getElementById("finish-area-btn").style.display = "none";
+        }
+        
+        // Start road drawing mode
+        roadDrawingMode = true;
+        currentRoadPoints = [];
+        
+        // Remove existing road layer if there is one
+        if (currentRoadLayer) {
+          map.removeLayer(currentRoadLayer);
+          currentRoadLayer = null;
+        }
+        
+        // If there's a defined road area, remove it
+        if (definedRoadArea) {
+          map.removeLayer(definedRoadArea);
+          definedRoadArea = null;
+        }
+        
+        document.getElementById("define-road-btn").style.display = "none";
+        document.getElementById("finish-road-btn").style.display = "inline-flex";
+        
+        alert("Road definition mode activated. Click on the map to add points defining the road area boundary. Click 'Set Road' when finished.");
+      }
+      
+      // Event listener for the finish road button
+      document.getElementById("finish-road-btn").addEventListener("click", async function() {
+        if (currentRoadPoints.length < 3) {
+          alert("A road area requires at least 3 points.");
+          return;
+        }
+        
+        // Calculate the average direction based on all segments
+        let totalDirection = 0;
+        let segmentCount = 0;
+        
+        // Store all coordinates for future reference
+        roadCoordinates = [...currentRoadPoints];
+        
+        // Calculate direction from all line segments
+        for (let i = 0; i < currentRoadPoints.length - 1; i++) {
+          const p1 = currentRoadPoints[i];
+          const p2 = currentRoadPoints[i + 1];
+          
+          const segmentBearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+          totalDirection += segmentBearing;
+          segmentCount++;
+        }
+        
+        // Also include the segment from last to first point to close the loop
+        if (currentRoadPoints.length > 2) {
+          const first = currentRoadPoints[0];
+          const last = currentRoadPoints[currentRoadPoints.length - 1];
+          
+          const closingBearing = calculateBearing(last.lat, last.lng, first.lat, first.lng);
+          totalDirection += closingBearing;
+          segmentCount++;
+        }
+        
+        // Calculate average direction
+        const avgDirection = segmentCount > 0 ? totalDirection / segmentCount : 0;
+        
+        // Prompt user to select the road direction, with the average direction as default
+        const selectedDirection = await openRoadDirectionModal(avgDirection);
+        if (selectedDirection !== null) {
+          roadDirection = selectedDirection;
+          definedRoadArea = currentRoadLayer;
+          
+          // Exit road drawing mode
+          roadDrawingMode = false;
+          document.getElementById("finish-road-btn").style.display = "none";
+          document.getElementById("define-road-btn").style.display = "inline-flex";
+          
+          // Style the road layer to indicate it's now defined
+          currentRoadLayer.setStyle({color: '#0d9488', fillOpacity: 0.3, weight: 3});
+          
+          // Add a label to the road
+          const center = currentRoadLayer.getBounds().getCenter();
+          L.marker(center, {
+            icon: L.divIcon({
+              className: 'road-label',
+              html: `<div style="background: rgba(255,255,255,0.7); padding: 3px; border-radius: 3px; color: #0d9488; font-weight: bold;">Road Direction: ${roadDirection}°</div>`,
+              iconSize: [100, 20],
+              iconAnchor: [50, 10]
+            })
+          }).addTo(map);
+          
+          // Create popup to show the road direction
+          L.popup()
+            .setLatLng(center)
+            .setContent(`Road area defined with direction: ${roadDirection}°`)
+            .openOn(map);
+            
+          currentRoadPoints = [];
+          
+          alert("Road area defined successfully. The traffic control elements will be placed within this area.");
+        } else {
+          // User canceled, stay in road drawing mode
+          alert("Road direction selection canceled. Continue adding points or click 'Set Road' when finished.");
+        }
+      });
+      
       // NEW: Enable polygon drawing mode.
       document.getElementById("select-area-btn").addEventListener("click", function () {
+        // Check if we have a defined road area
+        if (!definedRoadArea) {
+          customConfirm("No road area defined yet. It's recommended to define a road area first. Do you want to define a road area now?").then(function(result) {
+            if (result) {
+              startRoadDrawing();
+            } else {
+              startPolygonDrawing();
+            }
+          });
+        } else {
+          startPolygonDrawing();
+        }
+      });
+      
+      // Function to start polygon drawing mode
+      function startPolygonDrawing() {
         polygonDrawingMode = true;
         currentPolygonPoints = [];
+        
         if (currentPolygonLayer) {
           map.removeLayer(currentPolygonLayer);
           currentPolygonLayer = null;
         }
+        
         alert(
           "Polygon drawing mode activated. Click on the map to add polygon vertices. When finished, click the 'Finish Area' button."
         );
+        
         document.getElementById("finish-area-btn").style.display = "inline-flex";
-      });
+      }
 
       // Function to automatically plan a construction zone based on AI analysis
       function aiPlanConstructionZone(polygon, roadType = "residential", workZoneType = "TC2") {
@@ -1387,12 +1725,13 @@
         const center = bounds.getCenter();
         
         // For simplicity, we'll use the first point of the polygon as a reference
-        // to determine orientation
+        // to determine orientation if no road direction is defined
         const polygonPoints = polygon.getLatLngs()[0];
         
-        // Determine road direction (simplistic approach - assuming first segment direction)
-        let bearing = 0;
-        if (polygonPoints.length > 1) {
+        // Determine road direction - use the defined road direction if available,
+        // otherwise calculate from the polygon
+        let bearing = roadDirection;
+        if (bearing === 0 && polygonPoints.length > 1) {
           bearing = calculateBearing(
             polygonPoints[0].lat, 
             polygonPoints[0].lng, 
@@ -1410,14 +1749,36 @@
         
         // Create an array to hold all the new markers
         const newMarkers = [];
+        const placedMarkers = [];
+        
+        // Function to place marker only if inside road area
+        function tryPlaceMarker(lat, lng, label) {
+          // Check if inside the road area if one is defined
+          if (definedRoadArea) {
+            if (isPointInPolygon({lat, lng}, definedRoadArea)) {
+              const marker = createInteractiveMarker(lat, lng, label);
+              placedMarkers.push(marker);
+              return marker;
+            }
+            return null;
+          } else {
+            // If no road area defined, place marker without restrictions
+            const marker = createInteractiveMarker(lat, lng, label);
+            placedMarkers.push(marker);
+            return marker;
+          }
+        }
         
         // 1. Add the main construction zone marker at the center
-        const mainMarker = createInteractiveMarker(
+        const mainMarker = tryPlaceMarker(
           center.lat, 
           center.lng, 
           `${zoneConfig.name} (${roadConfig.speedLimit} km/h zone)`
         );
-        newMarkers.push(mainMarker);
+        
+        if (mainMarker) {
+          newMarkers.push(mainMarker);
+        }
         
         // 2. Add required signs based on work zone type
         zoneConfig.requiredSigns.forEach(signKey => {
@@ -1426,80 +1787,230 @@
           // Apply road type multiplier to distance
           const adjustedDistance = sign.distance * roadConfig.signageMultiplier;
           
-          // Place sign upstream (bearing - 180 for opposite direction)
-          const upstreamPoint = calculateDestination(
+          // Try multiple positions along the road to find a valid placement
+          // First, try the standard position
+          let upstreamPoint = calculateDestination(
             center.lat, 
             center.lng, 
             adjustedDistance, 
-            (bearing + 180) % 360
+            (bearing + 180) % 360 // upstream (opposite of bearing)
           );
           
-          const signMarker = createInteractiveMarker(
+          // If a road area is defined, try different distances until we find a valid point
+          if (definedRoadArea && !isPointInPolygon(upstreamPoint, definedRoadArea)) {
+            let found = false;
+            
+            // Try shorter distances until we find a valid point
+            for (let factor = 0.9; factor >= 0.3; factor -= 0.1) {
+              const testPoint = calculateDestination(
+                center.lat, 
+                center.lng, 
+                adjustedDistance * factor, 
+                (bearing + 180) % 360
+              );
+              
+              if (isPointInPolygon(testPoint, definedRoadArea)) {
+                upstreamPoint = testPoint;
+                found = true;
+                break;
+              }
+            }
+            
+            // If still not found, try points perpendicular to the road
+            if (!found) {
+              const perpDirections = [(bearing + 90) % 360, (bearing + 270) % 360];
+              
+              for (let perpDir of perpDirections) {
+                const testPoint = calculateDestination(
+                  center.lat, 
+                  center.lng, 
+                  30, // shorter distance for perpendicular
+                  perpDir
+                );
+                
+                if (isPointInPolygon(testPoint, definedRoadArea)) {
+                  upstreamPoint = testPoint;
+                  found = true;
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Add the sign if we have a valid position
+          const signMarker = tryPlaceMarker(
             upstreamPoint.lat, 
             upstreamPoint.lng, 
             `${sign.name} Sign (${signKey}) - ${adjustedDistance.toFixed(0)}m from work zone`
           );
-          newMarkers.push(signMarker);
+          
+          if (signMarker) {
+            newMarkers.push(signMarker);
+          }
           
           // For signs that should be on both ends (like TC-4 End Construction)
           if (signKey === "TC-4") {
-            const downstreamPoint = calculateDestination(
+            let downstreamPoint = calculateDestination(
               center.lat, 
               center.lng, 
               adjustedDistance, 
-              bearing
+              bearing // downstream (same as bearing)
             );
             
-            const endSignMarker = createInteractiveMarker(
+            // Like above, try to find a valid position if using road area
+            if (definedRoadArea && !isPointInPolygon(downstreamPoint, definedRoadArea)) {
+              let found = false;
+              
+              for (let factor = 0.9; factor >= 0.3; factor -= 0.1) {
+                const testPoint = calculateDestination(
+                  center.lat, 
+                  center.lng, 
+                  adjustedDistance * factor, 
+                  bearing
+                );
+                
+                if (isPointInPolygon(testPoint, definedRoadArea)) {
+                  downstreamPoint = testPoint;
+                  found = true;
+                  break;
+                }
+              }
+              
+              if (!found) {
+                // Try different angles
+                for (let angle = 15; angle <= 45; angle += 15) {
+                  const testPoint1 = calculateDestination(
+                    center.lat, 
+                    center.lng, 
+                    adjustedDistance * 0.5, 
+                    (bearing + angle) % 360
+                  );
+                  
+                  const testPoint2 = calculateDestination(
+                    center.lat, 
+                    center.lng, 
+                    adjustedDistance * 0.5, 
+                    (bearing - angle) % 360
+                  );
+                  
+                  if (isPointInPolygon(testPoint1, definedRoadArea)) {
+                    downstreamPoint = testPoint1;
+                    found = true;
+                    break;
+                  }
+                  
+                  if (isPointInPolygon(testPoint2, definedRoadArea)) {
+                    downstreamPoint = testPoint2;
+                    found = true;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            const endSignMarker = tryPlaceMarker(
               downstreamPoint.lat, 
               downstreamPoint.lng, 
               `${sign.name} Sign (${signKey}) - End of work zone`
             );
-            newMarkers.push(endSignMarker);
+            
+            if (endSignMarker) {
+              newMarkers.push(endSignMarker);
+            }
           }
         });
         
         // 3. Add pylons/cones around the perimeter
-        // For simplicity, we'll place them at fixed intervals around the polygon
+        // We'll now place them only along the road edge
         const coneSpacing = zoneConfig.coneSpacing;
-        for (let i = 0; i < polygonPoints.length; i++) {
-          const p1 = polygonPoints[i];
-          const p2 = polygonPoints[(i + 1) % polygonPoints.length];
+        
+        // If we have a defined road area, use its perimeter for placing cones
+        if (definedRoadArea) {
+          const roadPoints = definedRoadArea.getLatLngs()[0];
           
-          // Calculate distance between points
-          const segmentDistance = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-          const segmentBearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
-          
-          // Determine number of cones for this segment
-          const numCones = Math.max(1, Math.floor(segmentDistance / coneSpacing));
-          
-          // Place cones along the segment
-          for (let j = 0; j <= numCones; j++) {
-            // Skip the start point of segments after the first to avoid duplicates
-            if (j === 0 && i > 0) continue;
+          for (let i = 0; i < roadPoints.length; i++) {
+            const p1 = roadPoints[i];
+            const p2 = roadPoints[(i + 1) % roadPoints.length];
             
-            const distance = j * (segmentDistance / numCones);
-            const conePoint = calculateDestination(p1.lat, p1.lng, distance, segmentBearing);
+            // Calculate distance between points
+            const segmentDistance = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+            const segmentBearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
             
-            const coneMarker = createInteractiveMarker(
-              conePoint.lat, 
-              conePoint.lng, 
-              "Traffic Cone"
-            );
-            newMarkers.push(coneMarker);
+            // Determine number of cones for this segment
+            const numCones = Math.max(2, Math.floor(segmentDistance / coneSpacing));
+            
+            // Place cones along the segment
+            for (let j = 0; j <= numCones; j++) {
+              // Skip the start point of segments after the first to avoid duplicates
+              if (j === 0 && i > 0) continue;
+              
+              const distance = j * (segmentDistance / numCones);
+              const conePoint = calculateDestination(p1.lat, p1.lng, distance, segmentBearing);
+              
+              // Only place if inside construction zone
+              if (isPointInPolygon(conePoint, polygon)) {
+                const coneMarker = tryPlaceMarker(
+                  conePoint.lat, 
+                  conePoint.lng, 
+                  "Traffic Cone"
+                );
+                
+                if (coneMarker) {
+                  newMarkers.push(coneMarker);
+                }
+              }
+            }
+          }
+        } else {
+          // If no road area defined, place cones around the construction zone perimeter
+          for (let i = 0; i < polygonPoints.length; i++) {
+            const p1 = polygonPoints[i];
+            const p2 = polygonPoints[(i + 1) % polygonPoints.length];
+            
+            // Calculate distance between points
+            const segmentDistance = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+            const segmentBearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
+            
+            // Determine number of cones for this segment
+            const numCones = Math.max(1, Math.floor(segmentDistance / coneSpacing));
+            
+            // Place cones along the segment
+            for (let j = 0; j <= numCones; j++) {
+              // Skip the start point of segments after the first to avoid duplicates
+              if (j === 0 && i > 0) continue;
+              
+              const distance = j * (segmentDistance / numCones);
+              const conePoint = calculateDestination(p1.lat, p1.lng, distance, segmentBearing);
+              
+              const coneMarker = tryPlaceMarker(
+                conePoint.lat, 
+                conePoint.lng, 
+                "Traffic Cone"
+              );
+              
+              if (coneMarker) {
+                newMarkers.push(coneMarker);
+              }
+            }
           }
         }
         
         // 4. Add channelization barrels at key points
-        // For simplicity, we'll place barrels at polygon vertices
+        // For simplicity, we'll place barrels at polygon vertices that are inside the road area
         for (let i = 0; i < polygonPoints.length; i++) {
-          const barrelMarker = createInteractiveMarker(
+          const barrelMarker = tryPlaceMarker(
             polygonPoints[i].lat, 
             polygonPoints[i].lng, 
             "Channelization Barrel (TC-63)"
           );
-          newMarkers.push(barrelMarker);
+          
+          if (barrelMarker) {
+            newMarkers.push(barrelMarker);
+          }
         }
+        
+        // Update the allMarkers array
+        allMarkers = allMarkers.concat(placedMarkers);
         
         // Return the array of created markers
         return newMarkers;
