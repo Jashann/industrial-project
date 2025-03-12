@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Road Safety Demo with Suggestions</title>
+    <meta charset="UTF-8" />
+    <link
+      href="https://fonts.googleapis.com/css?family=Poppins:400,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <!-- Ionicons -->
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@5.5.2/dist/ionicons/ionicons.js"
+    ></script>
+  </head>
+  <body>
+    <div id="search-container">
+      <input type="text" id="location-input" placeholder="Enter location" />
+      <div id="suggestions"></div>
+      <button id="search-btn">
+        <ion-icon name="search-outline"></ion-icon> Search
+      </button>
+    </div>
+    <div id="map"></div>
+    
+    <!-- Visualization Controls Panel -->
+    <div id="visualization-controls">
+      <h3>Visualization Controls</h3>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-vectors" checked>
+        <label for="show-vectors">Show Direction Vectors</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-edge-vectors">
+        <label for="show-edge-vectors">Show Edge Vectors</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-sign-paths" checked>
+        <label for="show-sign-paths">Show Sign Paths</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-labels" checked>
+        <label for="show-labels">Show Labels</label>
+      </div>
+      <div class="viz-control-item">
+        <input type="checkbox" id="show-in-out-markers">
+        <label for="show-in-out-markers">Show Inside/Outside Markers</label>
+      </div>
+      <div class="viz-control-item">
+        <button id="clear-viz" style="width: 100%; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
+          Clear All Visualizations
+        </button>
+      </div>
+    </div>
+
+    <!-- Buttons Container -->
+    <div class="btns-left-top">
+      <button id="download-btn" class="flex-center btn-download">
+        <ion-icon name="cloud-download-outline"></ion-icon>
+        <span>Download</span>
+      </button>
+
+      <button id="export-btn" class="flex-center btn-export">
+        <ion-icon name="save-outline"></ion-icon>
+        <span>Export State</span>
+      </button>
+
+      <button id="import-btn" class="flex-center btn-import">
+        <ion-icon name="folder-open-outline"></ion-icon>
+        <span>Import State</span>
+      </button>
+      
+      <!-- Road Area Definition Button -->
+      <button id="define-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px;">
+        <ion-icon name="analytics-outline"></ion-icon>
+        <span>Define Road</span>
+      </button>
+      
+      <!-- Finish Road Definition Button (hidden by default) -->
+      <button id="finish-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px; display: none;">
+        <ion-icon name="checkmark-outline"></ion-icon>
+        <span>Set Road</span>
+      </button>
+
+      <!-- Construction Area Selection -->
+      <button id="select-area-btn" class="flex-center btn-select">
+        <ion-icon name="crop-outline"></ion-icon>
+        <span>Select Area</span>
+      </button>
+
+      <button id="finish-area-btn" class="flex-center btn-finish">
+        <ion-icon name="checkmark-outline"></ion-icon>
+        <span>Finish Area</span>
+      </button>
+      
+      <!-- AI Compliance Check Button -->
+      <button id="ai-check-btn" class="flex-center btn-select" style="background: linear-gradient(135deg, #4c1d95, #6b21a8);">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        <span>AI Check</span>
+      </button>
+      
+    </div>
+
+    <!-- Hidden file input for importing state -->
+    <input type="file" id="import-input" style="display: none" accept=".json" />
+
+    <!-- Custom Confirm Modal (Yes/No) -->
+    <div id="custom-confirm-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p id="custom-confirm-message"></p>
+        <div class="custom-modal-buttons">
+          <button id="custom-confirm-yes">
+            <ion-icon name="checkmark-outline"></ion-icon> Yes
+          </button>
+          <button id="custom-confirm-no">
+            <ion-icon name="close-outline"></ion-icon> No
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Choice Modal for Marker Actions (Drag/Delete/Cancel/Rename) -->
+    <div id="custom-choice-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p id="custom-choice-message"></p>
+        <div class="custom-modal-buttons">
+          <button id="action-drag">
+            <ion-icon name="brush-outline"></ion-icon> Drag Pin
+          </button>
+          <button id="action-delete">
+            <ion-icon name="trash-outline"></ion-icon> Delete Pin
+          </button>
+          <button id="action-rename">
+            <ion-icon name="create-outline"></ion-icon> Rename Pin
+          </button>
+          <button id="action-cancel">
+            <ion-icon name="close-circle-outline"></ion-icon> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Rename Modal -->
+    <div id="custom-rename-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p id="custom-rename-message">Enter new pin name:</p>
+        <input type="text" id="custom-rename-input" value="" />
+        <div class="custom-modal-buttons" style="margin-top: 15px;">
+          <button id="custom-rename-save">
+            <ion-icon name="checkmark-outline"></ion-icon> Save
+          </button>
+          <button id="custom-rename-cancel">
+            <ion-icon name="close-outline"></ion-icon> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Polygon Options Modal (Same design as custom-choice modal) -->
+    <div id="polygon-options-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p id="polygon-options-message">Construction Area Options</p>
+        <div class="custom-modal-buttons">
+          <button id="polygon-unselect-btn">
+            <ion-icon name="close-outline"></ion-icon> Unselect Area
+          </button>
+          <button id="polygon-copy-btn">
+            <ion-icon name="copy-outline"></ion-icon> Copy Coordinates
+          </button>
+          <button id="polygon-view-btn">
+            <ion-icon name="eye-outline"></ion-icon> View Coordinates
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Road Direction Modal -->
+    <div id="road-direction-modal" class="custom-modal">
+      <div class="custom-modal-content">
+        <p>Select Road Direction</p>
+        <div style="padding: 15px 0;">
+          <div style="display: flex; justify-content: center; position: relative; width: 200px; height: 200px; margin: 0 auto;">
+            <!-- Direction Compass -->
+            <div style="position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid #333; display: flex; justify-content: center; align-items: center;">
+              <div style="position: absolute; top: 5px; left: 50%; transform: translateX(-50%);">N</div>
+              <div style="position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);">S</div>
+              <div style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%);">W</div>
+              <div style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%);">E</div>
+              
+              <!-- Direction Arrow (will be rotated via JavaScript) -->
+              <div id="direction-arrow" style="width: 80%; height: 4px; background-color: #e74c3c; transform-origin: center; transform: rotate(0deg);">
+                <div style="width: 0; height: 0; border-left: 10px solid transparent; border-right: 10px solid transparent; border-bottom: 15px solid #e74c3c; position: absolute; right: -10px; top: -5px; transform: rotate(90deg);"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: flex; justify-content: center; margin-top: 15px;">
+            <input type="range" id="direction-slider" min="0" max="359" value="0" style="width: 100%;">
+          </div>
+          <div style="text-align: center; margin-top: 5px;">
+            Direction: <span id="direction-value">0°</span>
+          </div>
+        </div>
+        <div class="custom-modal-buttons">
+          <button id="road-direction-save">
+            <ion-icon name="checkmark-outline"></ion-icon> Save Direction
+          </button>
+          <button id="road-direction-cancel">
+            <ion-icon name="close-outline"></ion-icon> Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load scripts -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-image/leaflet-image.js"></script>
+    
+    <!-- Application scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/modals.js"></script>
+    <script src="js/visualization.js"></script>
+    <script src="js/road-markers.js"></script>
+    <script src="js/traffic-planner.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

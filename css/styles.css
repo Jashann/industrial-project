@@ -1,0 +1,344 @@
+/* General Page Styles */
+body {
+  margin: 0;
+  padding: 0;
+  background: #f4f6f8;
+  font-family: "Poppins", sans-serif;
+}
+
+/* Map container */
+#map {
+  height: 100vh;
+}
+
+/* Search Container */
+#search-container {
+  position: absolute;
+  top: 20px;
+  left: 60px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 280px;
+}
+
+#location-input {
+  width: 95%;
+  display: inline-block;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+#location-input:focus {
+  border-color: #aaa;
+}
+
+/* Search Button */
+button {
+  outline: none;
+  border: none;
+  font-family: inherit;
+}
+
+button ion-icon {
+  font-size: 18px;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#search-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, #667eea, #0280e7);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+#search-btn:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Buttons Container */
+.btns-left-top {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  z-index: 1100;
+}
+
+/* Common Button Styles within the Container */
+.btns-left-top button {
+  padding: 10px 15px;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.3s, box-shadow 0.3s, width 0.3s;
+  width: 50px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.btns-left-top button ion-icon {
+  font-size: 18px;
+  margin-top: 5px;
+}
+
+.btns-left-top button span {
+  opacity: 0;
+  transition: opacity 0.2s;
+  margin-left: 5px;
+  white-space: nowrap;
+  display: none;
+}
+
+.btns-left-top button:hover {
+  width: 150px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btns-left-top button:hover span {
+  opacity: 1;
+  display: block;
+}
+
+/* Individual Button Backgrounds */
+.btn-download {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+}
+
+.btn-download:hover {
+  background: linear-gradient(135deg, #38a169, #2f855a);
+}
+
+.btn-export,
+.btn-import {
+  background: linear-gradient(135deg, #f6ad55, #ed8936);
+}
+
+.btn-export:hover,
+.btn-import:hover {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+}
+
+.btn-select {
+  background: linear-gradient(135deg, #8e44ad, #9b59b6);
+}
+
+.btn-select:hover {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+.btn-finish {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+#finish-area-btn {
+  display: none;
+}
+
+.btn-finish:hover {
+  background: linear-gradient(135deg, #c0392b, #e74c3c);
+}
+
+/* Suggestions Dropdown */
+#suggestions {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  position: absolute;
+  top: 65px;
+  left: 15px;
+  right: 15px;
+  z-index: 1001;
+  display: none;
+}
+
+.suggestion-item {
+  padding: 10px;
+  cursor: pointer;
+  border-bottom: 1px solid #eee;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: #f1f1f1;
+}
+
+/* Vector visualization styles */
+.highlighted-marker {
+  filter: drop-shadow(0 0 10px yellow);
+  transform: scale(1.2);
+}
+
+.vector-label div, .warning-label div {
+  font-size: 12px;
+  white-space: nowrap;
+  box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+/* Visualization Controls Panel */
+#visualization-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+#visualization-controls h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.viz-control-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.viz-control-item label {
+  margin-left: 5px;
+  font-size: 12px;
+}
+
+/* Custom Modal Styles */
+.custom-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.custom-modal-content {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 90%;
+}
+
+.custom-modal-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.custom-modal-buttons button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+/* Specific Modal Button Colors */
+#custom-confirm-yes, #polygon-view-btn {
+  background: linear-gradient(135deg, #28a745, #218838);
+  color: #fff;
+}
+
+#custom-confirm-yes:hover, #polygon-view-btn:hover {
+  background: linear-gradient(135deg, #218838, #1e7e34);
+}
+
+#custom-confirm-no {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: #fff;
+}
+
+#custom-confirm-no:hover {
+  background: linear-gradient(135deg, #c82333, #bd2130);
+}
+
+#action-drag {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  color: #fff;
+}
+
+#action-drag:hover {
+  background: linear-gradient(135deg, #138496, #117a8b);
+}
+
+#action-delete, #polygon-unselect-btn {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: #fff;
+}
+
+#action-delete:hover, #polygon-unselect-btn:hover {
+  background: linear-gradient(135deg, #c82333, #bd2130);
+}
+
+#action-rename, #polygon-copy-btn {
+  background: linear-gradient(135deg, #f6ad55, #ed8936);
+  color: #fff;
+}
+
+#action-rename:hover, #polygon-copy-btn:hover {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+}
+
+#action-cancel {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: #fff;
+}
+
+#action-cancel:hover {
+  background: linear-gradient(135deg, #5a6268, #545b62);
+}
+
+/* Custom Rename Modal Styles */
+#custom-rename-modal input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
