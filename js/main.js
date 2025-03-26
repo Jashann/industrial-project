@@ -183,65 +183,96 @@ document.addEventListener('DOMContentLoaded', function() {
       startPolygonDrawing();
     }
   });
+
+  /**
+ * Prompts the user to select a road type
+ * @returns {Promise<string>} A promise that resolves to the selected road type
+ */
+function promptForRoadType() {
+  return new Promise((resolve) => {
+    // Create a custom modal for road type selection
+    const modal = document.createElement('div');
+    modal.className = 'custom-modal';
+    modal.style.display = 'flex';
+    
+    modal.innerHTML = `
+      <div class="custom-modal-content">
+        <h3>Select Road Type</h3>
+        <p>Please select the type of road for proper traffic control placement:</p>
+        
+        <div style="margin: 20px 0; text-align: left;">
+          <div style="margin-bottom: 10px;">
+            <input type="radio" id="road-regional" name="roadType" value="regional" checked>
+            <label for="road-regional" style="margin-left: 8px; font-weight: bold;">Regional Street</label>
+            <p style="margin: 5px 0 0 24px; font-size: 12px; color: #666;">
+              Higher traffic volume, typically multiple lanes
+            </p>
+          </div>
+          
+          <div style="margin-bottom: 10px;">
+            <input type="radio" id="road-residential" name="roadType" value="residential">
+            <label for="road-residential" style="margin-left: 8px; font-weight: bold;">Residential/Non-Regional</label>
+            <p style="margin: 5px 0 0 24px; font-size: 12px; color: #666;">
+              Lower traffic volume, typically fewer lanes
+            </p>
+          </div>
+          
+          <div style="margin-bottom: 10px;">
+            <input type="radio" id="road-collector" name="roadType" value="collector">
+            <label for="road-collector" style="margin-left: 8px; font-weight: bold;">Collector Street</label>
+            <p style="margin: 5px 0 0 24px; font-size: 12px; color: #666;">
+              Medium traffic volume, connects local streets to arterials
+            </p>
+          </div>
+        </div>
+        
+        <div class="custom-modal-buttons">
+          <button id="road-type-confirm" style="background: linear-gradient(135deg, #28a745, #218838); color: white;">
+            <ion-icon name="checkmark-outline"></ion-icon> Confirm
+          </button>
+          <button id="road-type-cancel" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white;">
+            <ion-icon name="close-outline"></ion-icon> Cancel
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Event handlers for buttons
+    document.getElementById('road-type-confirm').addEventListener('click', () => {
+      const selected = document.querySelector('input[name="roadType"]:checked');
+      const roadType = selected ? selected.value : 'residential';
+      document.body.removeChild(modal);
+      resolve(roadType);
+    });
+    
+    document.getElementById('road-type-cancel').addEventListener('click', () => {
+      document.body.removeChild(modal);
+      resolve('residential'); // Default to residential if cancelled
+    });
+  });
+}
   
   // Finish area button
   document.getElementById("finish-area-btn").addEventListener("click", async function () {
-    if (currentPolygonPoints.length < 3) {
-      alert("A polygon requires at least 3 points.");
-      return;
+    if (currentPolygonLayer) {
+      // Add the polygon to the drawn polygons array
+      drawnPolygons.push(currentPolygonLayer);
+      
+      // Get road type - you might want to ask the user or determine from the map
+      const roadType = await promptForRoadType(); // You'd need to create this function
+      
+      // Plan the construction zone with the new function
+      aiPlanConstructionZone(currentPolygonLayer, roadType);
+      
+      // Reset drawing state
+      polygonDrawingMode = false;
+      document.getElementById("select-area-btn").style.display = "block";
+      document.getElementById("finish-area-btn").style.display = "none";
+      currentPolygonPoints = [];
+      currentPolygonLayer = null;
     }
-    polygonDrawingMode = false;
-    this.style.display = "none";
-    const finishedPolygon = currentPolygonLayer;
-    
-    // Add click handler for the polygon
-    finishedPolygon.on("click", function (e) {
-      showPolygonOptionsModal(finishedPolygon);
-    });
-    
-    // Add to the drawn polygons array
-    drawnPolygons.push(finishedPolygon);
-    
-    // Ask user if they want AI-assisted planning
-    const useAI = await customConfirm("Do you want to use AI to automatically plan the construction zone layout?");
-    
-    if (useAI) {
-      // First, prompt for road type selection
-      const roadTypes = Object.keys(REGULATIONS.roadTypes);
-      let roadTypePrompt = "Select road type:\n";
-      roadTypes.forEach((type, index) => {
-        roadTypePrompt += `${index + 1}. ${type} (${REGULATIONS.roadTypes[type].speedLimit} km/h)\n`;
-      });
-      
-      const roadTypeIndex = parseInt(prompt(roadTypePrompt, "1")) - 1;
-      const selectedRoadType = roadTypes[roadTypeIndex >= 0 && roadTypeIndex < roadTypes.length ? roadTypeIndex : 0];
-      
-      // Then, prompt for work zone type selection
-      const workZoneTypes = Object.keys(REGULATIONS.workZoneTypes);
-      let workZonePrompt = "Select work zone type:\n";
-      workZoneTypes.forEach((type, index) => {
-        workZonePrompt += `${index + 1}. ${REGULATIONS.workZoneTypes[type].name} - ${REGULATIONS.workZoneTypes[type].description}\n`;
-      });
-      
-      const workZoneIndex = parseInt(prompt(workZonePrompt, "1")) - 1;
-      const selectedWorkZoneType = workZoneTypes[workZoneIndex >= 0 && workZoneIndex < workZoneTypes.length ? workZoneIndex : 0];
-      
-      // Perform AI-based planning based on selected options
-      const createdMarkers = aiPlanConstructionZone(finishedPolygon, selectedRoadType, selectedWorkZoneType);
-      
-      // Create a bounding group of all elements and fit the map to it
-      const allElements = [finishedPolygon, ...createdMarkers];
-      const group = L.featureGroup(allElements);
-      map.fitBounds(group.getBounds().pad(0.2));
-      
-      alert(`AI planning complete! Created ${createdMarkers.length} traffic control elements for a ${selectedRoadType} road with ${REGULATIONS.workZoneTypes[selectedWorkZoneType].name} configuration.`);
-    } else {
-      alert("Construction area created. Click on it to view options.");
-    }
-    
-    // Reset polygon drawing state
-    currentPolygonPoints = [];
-    currentPolygonLayer = null;
   });
   
   // AI Check button
