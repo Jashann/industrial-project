@@ -1,0 +1,5 @@
+{
+  "model_type": "combined",
+  "input_dim": 8,
+  "trained_with_position": true
+}

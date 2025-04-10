@@ -29,8 +29,6 @@ fetch("my_plan_latlon.geojson")
 
 // Event listeners for buttons
 document.addEventListener('DOMContentLoaded', function() {
-  // Initialize visualization controls
-  initVizControls();
   
   // Search button
   document.getElementById("search-btn").addEventListener("click", function () {
@@ -72,99 +70,13 @@ document.addEventListener('DOMContentLoaded', function() {
     importState(e.target.files[0]);
   });
   
-  // Define road button
-  document.getElementById("define-road-btn").addEventListener("click", async function () {
-    // If we already have a defined road, ask to confirm replacement
-    if (definedRoadArea) {
-      const result = await customConfirm("You already have a defined road area. Do you want to replace it?");
-      if (result) {
-        // Ask for lane count before starting road drawing
-        roadLanes = await promptForLaneCount();
-        startRoadDrawing();
-      }
+  // Define work area button
+  document.getElementById("define-workarea-btn").addEventListener("click", function() {
+    // Start work area definition (using work-area-manager.js)
+    if (typeof startWorkAreaDefinition === 'function') {
+      startWorkAreaDefinition();
     } else {
-      // Ask for lane count before starting road drawing
-      roadLanes = await promptForLaneCount();
-      startRoadDrawing();
-    }
-  });
-  
-  // Finish road button
-  document.getElementById("finish-road-btn").addEventListener("click", async function() {
-    if (currentRoadPoints.length < 3) {
-      alert("A road area requires at least 3 points.");
-      return;
-    }
-    
-    // Calculate the average direction based on all segments
-    let totalDirection = 0;
-    let segmentCount = 0;
-    
-    // Store all coordinates for future reference
-    roadCoordinates = [...currentRoadPoints];
-    
-    // Calculate direction from all line segments
-    for (let i = 0; i < currentRoadPoints.length - 1; i++) {
-      const p1 = currentRoadPoints[i];
-      const p2 = currentRoadPoints[i + 1];
-      
-      const segmentBearing = calculateBearing(p1.lat, p1.lng, p2.lat, p2.lng);
-      totalDirection += segmentBearing;
-      segmentCount++;
-    }
-    
-    // Also include the segment from last to first point to close the loop
-    if (currentRoadPoints.length > 2) {
-      const first = currentRoadPoints[0];
-      const last = currentRoadPoints[currentRoadPoints.length - 1];
-      
-      const closingBearing = calculateBearing(last.lat, last.lng, first.lat, first.lng);
-      totalDirection += closingBearing;
-      segmentCount++;
-    }
-    
-    // Calculate average direction
-    const avgDirection = segmentCount > 0 ? totalDirection / segmentCount : 0;
-    
-    // Prompt user to select the road direction, with the average direction as default
-    const selectedDirection = await openRoadDirectionModal(avgDirection);
-    if (selectedDirection !== null) {
-      roadDirection = selectedDirection;
-      definedRoadArea = currentRoadLayer;
-      
-      // Exit road drawing mode
-      roadDrawingMode = false;
-      document.getElementById("finish-road-btn").style.display = "none";
-      document.getElementById("define-road-btn").style.display = "inline-flex";
-      
-      // Style the road layer to indicate it's now defined
-      currentRoadLayer.setStyle({color: '#0d9488', fillOpacity: 0.3, weight: 3});
-      
-      // Add a label to the road including lane count
-      const center = currentRoadLayer.getBounds().getCenter();
-      L.marker(center, {
-        icon: L.divIcon({
-          className: 'road-label',
-          html: `<div style="background: rgba(255,255,255,0.7); padding: 3px; border-radius: 3px; color: #0d9488; font-weight: bold;">
-                  ${roadLanes}-Lane Road | Direction: ${roadDirection}°
-                 </div>`,
-          iconSize: [150, 20],
-          iconAnchor: [75, 10]
-        })
-      }).addTo(map);
-      
-      // Create popup to show the road information
-      L.popup()
-        .setLatLng(center)
-        .setContent(`${roadLanes}-lane road defined with direction: ${roadDirection}°`)
-        .openOn(map);
-        
-      currentRoadPoints = [];
-      
-      alert(`${roadLanes}-lane road area defined successfully. The traffic control elements will be placed within this area.`);
-    } else {
-      // User canceled, stay in road drawing mode
-      alert("Road direction selection canceled. Continue adding points or click 'Set Road' when finished.");
+      console.error("startWorkAreaDefinition function not found. Make sure work-area-manager.js is loaded.");
     }
   });
   
@@ -202,6 +114,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add to the drawn polygons array
     drawnPolygons.push(finishedPolygon);
     
+    // First, prompt for road type selection
+    const roadTypes = Object.keys(REGULATIONS.roadTypes);
+    let roadTypePrompt = "Select road type:\n";
+    roadTypes.forEach((type, index) => {
+      roadTypePrompt += `${index + 1}. ${type} (${REGULATIONS.roadTypes[type].speedLimit} km/h)\n`;
+    });
+    
+    const roadTypeIndex = parseInt(prompt(roadTypePrompt, "1")) - 1;
+    const selectedRoadType = roadTypes[roadTypeIndex >= 0 && roadTypeIndex < roadTypes.length ? roadTypeIndex : 0];
+    
+    // Simplified work zone selection
+    const selectedWorkZoneType = "TC2"; // Default to TC-2 Roadwork
+    
+    // Place 3 points in a straight line along the road direction
+    const createdMarkers = aiPlanConstructionZone(finishedPolygon, selectedRoadType, selectedWorkZoneType);
+    
+    // Create a bounding group of all elements and fit the map to it
+    const allElements = [finishedPolygon, ...createdMarkers];
+    const group = L.featureGroup(allElements);
+    map.fitBounds(group.getBounds().pad(0.2));
+    
+    alert(`Created ${createdMarkers.length} points along the road direction.`);
+    
+    /* Original AI-assisted planning code commented out
     // Ask user if they want AI-assisted planning
     const useAI = await customConfirm("Do you want to use AI to automatically plan the construction zone layout?");
     
@@ -238,6 +174,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       alert("Construction area created. Click on it to view options.");
     }
+    */
     
     // Reset polygon drawing state
     currentPolygonPoints = [];
@@ -267,8 +204,16 @@ document.addEventListener('DOMContentLoaded', function() {
   );
 });
 
+// Global variables for item placement
+var placementModeActive = false;
+var selectedItemType = null;
+var selectedItemName = null;
+var selectedItemIcon = null;
+
 // Map click event handler
 map.on("click", async function (e) {
+  // Map click handler in main.js
+  
   // If the polygon options modal is open, do nothing.
   if (polygonModalOpen) return;
   
@@ -307,22 +252,30 @@ map.on("click", async function (e) {
     return; // Skip marker confirmation when drawing polygon.
   }
   
-  // Otherwise, prompt to add a new marker.
-  const addPin = await customConfirm("Do you want to add a new pin here?");
-  if (addPin) {
+  // If placement mode is active, place the selected item
+  if (placementModeActive && selectedItemIcon) {
     const lat = e.latlng.lat;
     const lon = e.latlng.lng;
     
+    // Check if inside road area (if defined)
     if (definedRoadArea && !isPointInPolygon({lat, lng: lon}, definedRoadArea)) {
-      alert("Cannot place marker outside the defined road area. Please place markers within the road boundaries.");
-    } else {
-      createInteractiveMarker(
-        lat,
-        lon,
-        "Pin dropped at: " + lat.toFixed(5) + ", " + lon.toFixed(5)
-      ).openPopup();
+      alert("Cannot place item outside the defined road area. Please place items within the road boundaries.");
+      return;
     }
+    
+    // Create marker with the selected icon
+    createInteractiveMarker(
+      lat,
+      lon,
+      selectedItemName,
+      selectedItemIcon
+    ).openPopup();
+    
+    return;
   }
+  
+  // Skip the "add pin" functionality - we now use the item menu instead
+  return;
 });
 
 /**
@@ -406,6 +359,17 @@ function fetchSuggestions(query) {
             // Add to the drawn polygons array
             drawnPolygons.push(constructionZone);
             
+            // Place 3 points in a straight line along the road direction
+            const createdMarkers = aiPlanConstructionZone(constructionZone, analyzedRoadType, analyzedWorkZoneType);
+            
+            // Create a bounding group of all elements and fit the map to it
+            const allElements = [constructionZone, ...createdMarkers];
+            const group = L.featureGroup(allElements);
+            map.fitBounds(group.getBounds().pad(0.2));
+            
+            alert(`Created ${createdMarkers.length} points along the road direction.`);
+            
+            /* Original AI-based planning code commented out
             // Ask if user wants AI to plan the construction zone
             const useAI = await customConfirm(
               `AI suggests a ${analyzedWorkZoneType} configuration for this location.\n\nDo you want to use AI to automatically plan the construction zone layout?`
@@ -430,6 +394,7 @@ function fetchSuggestions(query) {
               );
               mainMarker.openPopup();
             }
+            */
           });
           suggestionsDiv.appendChild(suggestionItem);
         });
@@ -504,6 +469,17 @@ async function performSearch(query) {
       // Add to the drawn polygons array
       drawnPolygons.push(constructionZone);
       
+      // Place 3 points in a straight line along the road direction
+      const createdMarkers = aiPlanConstructionZone(constructionZone, analyzedRoadType, analyzedWorkZoneType);
+      
+      // Create a bounding group of all elements and fit the map to it
+      const allElements = [constructionZone, ...createdMarkers];
+      const group = L.featureGroup(allElements);
+      map.fitBounds(group.getBounds().pad(0.2));
+      
+      alert(`Created ${createdMarkers.length} points along the road direction.`);
+      
+      /* Original AI-based planning code commented out
       // Ask if user wants AI to plan the construction zone
       const useAI = await customConfirm(
         `AI suggests a ${analyzedWorkZoneType} configuration for this location.\n\nDo you want to use AI to automatically plan the construction zone layout?`
@@ -528,6 +504,7 @@ async function performSearch(query) {
         );
         mainMarker.openPopup();
       }
+      */
     } else {
       alert("Location not found!");
     }

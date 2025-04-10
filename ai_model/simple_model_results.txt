@@ -1,0 +1,11 @@
+
+    Simple k-NN Model Evaluation Results:
+    ------------------------------------
+    Model type: k-Nearest Neighbors (k=5)
+    Features: Angular relationships between work area points
+    Mean Circular Error: 4.51 degrees
+    Median Circular Error: 3.80 degrees
+    
+    This means the model can predict the construction rotation
+    with an average error of 4.51 degrees.
+    

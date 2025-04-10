@@ -80,11 +80,13 @@ button ion-icon {
 /* Buttons Container */
 .btns-left-top {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  flex-wrap: wrap;
+  max-width: 580px;
+  gap: 20px;
   z-index: 1100;
 }
 
@@ -103,6 +105,7 @@ button ion-icon {
   width: 50px;
   overflow: hidden;
   white-space: nowrap;
+  position: relative;
 }
 
 .btns-left-top button ion-icon {
@@ -208,34 +211,265 @@ button ion-icon {
   box-shadow: 0 0 5px rgba(0,0,0,0.3);
 }
 
-/* Visualization Controls Panel */
-#visualization-controls {
-  position: absolute;
-  bottom: 20px;
-  right: 20px;
+/* Item Selection Menu Styles */
+.item-selection-menu {
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  z-index: 1000;
   background: white;
-  padding: 10px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  z-index: 1000;
+  padding: 15px;
+  width: 280px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-#visualization-controls h3 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
+.item-selection-menu h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
   text-align: center;
+  font-size: 16px;
+  color: #333;
 }
 
-.viz-control-item {
+.item-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.item-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 6px;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
 }
 
-.viz-control-item label {
-  margin-left: 5px;
-  font-size: 12px;
+.item-card:hover {
+  background-color: #f0f9ff;
+  transform: translateY(-2px);
 }
+
+.item-card.selected {
+  background-color: #e6f7ff;
+  border: 2px solid #1890ff;
+}
+
+.item-image {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+
+.item-name {
+  font-size: 12px;
+  text-align: center;
+  color: #555;
+  line-height: 1.2;
+}
+
+/* Line Customization Panel */
+.line-panel {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  z-index: 1000;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  width: 280px;
+  display: none;
+}
+
+.line-panel h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 16px;
+  color: #333;
+}
+
+.line-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.line-panel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.line-panel-item label {
+  font-size: 14px;
+  color: #333;
+}
+
+.line-panel-item input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.line-panel-item button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #1e40af, #3b82f6);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.line-panel-item button:hover {
+  background: linear-gradient(135deg, #1e3a8a, #2563eb);
+}
+
+.line-panel-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+}
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #047857, #059669) !important;
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, #dc2626, #ef4444) !important;
+}
+
+.delete-btn:hover {
+  background: linear-gradient(135deg, #b91c1c, #dc2626) !important;
+}
+
+/* Handle points for lines */
+.line-handle {
+  cursor: move;
+  fill: #3b82f6;
+  stroke: white;
+  stroke-width: 2;
+  z-index: 1000 !important;
+}
+
+/* Line editing styles */
+.line-handle.start-handle {
+  fill: #f97316;
+  filter: drop-shadow(0px 0px 3px rgba(249, 115, 22, 0.5));
+  transition: transform 0.2s ease, fill 0.2s ease;
+}
+
+.line-handle.start-handle:hover {
+  transform: scale(1.2);
+  fill: #fb923c;
+}
+
+.line-handle.end-handle {
+  fill: #f97316;
+  filter: drop-shadow(0px 0px 3px rgba(249, 115, 22, 0.5));
+  transition: transform 0.2s ease, fill 0.2s ease;
+}
+
+.line-handle.end-handle:hover {
+  transform: scale(1.2);
+  fill: #fb923c;
+}
+
+.line-handle.middle-handle {
+  fill: #f59e0b;
+  filter: drop-shadow(0px 0px 3px rgba(245, 158, 11, 0.5));
+  transition: transform 0.2s ease, fill 0.2s ease;
+}
+
+.line-handle.middle-handle:hover {
+  transform: scale(1.2);
+  fill: #fbbf24;
+}
+
+.editing-line {
+  stroke-dasharray: 5, 5;
+  animation: dash 1s linear infinite;
+  stroke-width: 4;
+  cursor: move;
+  z-index: 800 !important;
+  filter: drop-shadow(0px 0px 3px rgba(59, 130, 246, 0.5));
+}
+
+/* Distance label animation */
+.drag-distance-label {
+  animation: pulse 1.5s infinite ease-in-out;
+}
+
+/* Enhanced snap effect for points */
+.snap-effect {
+  animation: snap-ring 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes snap-ring {
+  0% {
+    stroke-width: 3;
+    r: 5;
+    opacity: 1;
+  }
+  100% {
+    stroke-width: 0.5;
+    r: 15;
+    opacity: 0;
+  }
+}
+
+/* Line tooltip styling */
+.line-tooltip {
+  background: rgba(45, 55, 72, 0.9);
+  border: none;
+  border-radius: 3px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  color: white;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: normal;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.line-tooltip:before {
+  border-top-color: rgba(45, 55, 72, 0.9);
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 
 /* Custom Modal Styles */
 .custom-modal {
@@ -341,4 +575,67 @@ button ion-icon {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+}
+
+/* Construction Inventory Panel */
+#construction-inventory {
+  position: fixed;
+  top: 100px;
+  left: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 250px;
+  max-height: 60%;
+  overflow-y: auto;
+  z-index: 1000;
+  padding: 10px;
+  display: none;
+}
+
+#construction-inventory h3 {
+  margin-top: 0;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 16px;
+}
+
+#inventory-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#inventory-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+#inventory-list .item-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#inventory-list .item-icon {
+  width: 24px;
+  height: 24px;
+}
+
+#inventory-list .item-count {
+  background: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  color: #4b5563;
+}
+
+#inventory-empty {
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+  padding: 10px 0;
 }

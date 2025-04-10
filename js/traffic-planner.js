@@ -150,6 +150,11 @@ function checkCompliance() {
 async function aiRecommendFixes(issues) {
   if (issues.length === 0) return;
   
+  // This function is commented out to disable AI recommendations
+  alert("Compliance check complete. Please manually add required traffic control elements.");
+  return;
+  
+  /* Original AI recommendation code commented out
   let recommendations = [];
   
   // Generate recommendations based on issue type
@@ -209,6 +214,7 @@ async function aiRecommendFixes(issues) {
       alert(`AI auto-fix complete! Added ${createdMarkers.length} traffic control elements.`);
     }
   }
+  */
 }
 
 /**
@@ -262,22 +268,64 @@ function aiPlanConstructionZone(polygon, roadType = "residential", workZoneType 
   
   // Use the road direction if defined
   let bearing = window.roadDirection;
-  if (bearing === 0 && polygonPoints.length > 1) {
-    bearing = calculateBearing(
-      polygonPoints[0].lat, 
-      polygonPoints[0].lng, 
-      polygonPoints[1].lat, 
-      polygonPoints[1].lng
-    );
-  }
-  
-  // Get appropriate regulations for the work zone and road type
-  const zoneConfig = REGULATIONS.workZoneTypes[workZoneType];
-  const roadConfig = REGULATIONS.roadTypes[roadType];
+  // if (bearing === 0 && polygonPoints.length > 1) {
+  //   bearing = calculateBearing(
+  //     polygonPoints[0].lat, 
+  //     polygonPoints[0].lng, 
+  //     polygonPoints[1].lat, 
+  //     polygonPoints[1].lng
+  //   );
+  // }
   
   // Arrays to track markers
   const newMarkers = [];
   const placedMarkers = [];
+  
+  // Create a vector for the road direction
+  // Adjust bearing so 0 degrees is straight right (east) along the x-axis
+  // In standard bearing, 0° is north, 90° is east - we need to adjust this
+  directionalVectors = [];
+  for (let i = 0; i < 10; i++) {
+    const bearingRad = (-(i*45) * Math.PI) / 180;
+    const directionVector = {
+      x: Math.cos(bearingRad),
+      y: Math.sin(bearingRad)  // Note: We use sin for y to follow right-hand coordinate system
+    };
+    
+    directionalVectors.push(directionVector);
+  }
+
+  // Place 3 points in a straight line in the direction of the road
+  const spacing = 0.0007; // Spacing between points (adjust as needed)
+  for (let j = 0; j < 10; j++) {
+    for (let i = 0; i < 10; i++) {
+      // Calculate position for each point
+      const pointLat = center.lat + (directionVectors[j].y * spacing * i);
+      const pointLng = center.lng + (directionVectors[j].x * spacing * i);
+      
+      // Create a marker
+      const pointMarker = createInteractiveMarker(
+        pointLat, 
+        pointLng, 
+        `Road Point ${i+1}`
+      );
+      
+      placedMarkers.push(pointMarker);
+      newMarkers.push(pointMarker);
+    }
+  }
+  
+  // Update the allMarkers array with placed markers
+  window.allMarkers = window.allMarkers.concat(placedMarkers);
+  
+  // Return the array of created markers
+  return newMarkers;
+  
+  // Original AI fill feature commented out below
+  /*
+  // Get appropriate regulations for the work zone and road type
+  const zoneConfig = REGULATIONS.workZoneTypes[workZoneType];
+  const roadConfig = REGULATIONS.roadTypes[roadType];
   
   // Use vector-based approach for sign placement
   console.log("Using vector-based approach for sign placement");
@@ -513,12 +561,7 @@ function aiPlanConstructionZone(polygon, roadType = "residential", workZoneType 
       }
     }
   }
-  
-  // Update the allMarkers array with placed markers
-  window.allMarkers = window.allMarkers.concat(placedMarkers);
-  
-  // Return the array of created markers
-  return newMarkers;
+  */
 }
 
 // Export all functions if in a module environment

@@ -36,12 +36,31 @@ var allMarkers = [];
  * @param {number} lat - Latitude for the marker
  * @param {number} lon - Longitude for the marker
  * @param {string} popupContent - Content for the marker's popup
+ * @param {string} [iconUrl] - Optional URL to the icon image
  * @returns {L.Marker} The created marker
  */
-function createInteractiveMarker(lat, lon, popupContent) {
-  var marker = L.marker([lat, lon], { draggable: false }).addTo(map);
+function createInteractiveMarker(lat, lon, popupContent, iconUrl) {
+  // Create custom icon if URL is provided
+  let markerOptions = { draggable: true };  // All markers now draggable by default
+  
+  if (iconUrl) {
+    const customIcon = L.icon({
+      iconUrl: iconUrl,
+      iconSize: [30, 30],     // Size of the icon
+      iconAnchor: [15, 15],   // Point of the icon which corresponds to marker's location
+      popupAnchor: [0, -15]   // Point from which the popup should open relative to the iconAnchor
+    });
+    markerOptions.icon = customIcon;
+  }
+  
+  var marker = L.marker([lat, lon], markerOptions).addTo(map);
   marker.bindPopup(popupContent);
   allMarkers.push(marker);
+
+  // Store the icon URL for later reference
+  if (iconUrl) {
+    marker.iconUrl = iconUrl;
+  }
 
   // Show popup on hover.
   marker.on("mouseover", function () {
@@ -50,26 +69,104 @@ function createInteractiveMarker(lat, lon, popupContent) {
   marker.on("mouseout", function () {
     marker.closePopup();
   });
-
-  // On click, prompt for marker actions.
-  marker.on("click", async function (e) {
-    if (marker.dragging && marker.dragging.enabled()) return;
-    const action = await customChoice("What would you like to do?");
-    if (action === "drag") {
-      marker.dragging.enable();
-      alert(
-        "You can now drag the marker. Once you finish dragging, it will automatically stop."
-      );
-      marker.once("dragend", function (e) {
-        marker.dragging.disable();
-        const newLatLng = marker.getLatLng();
+  
+  // Dragging and snapping functionality
+  marker.on("dragstart", function(e) {
+    marker._isDragging = true;
+    // Store original position in case of action cancellation
+    marker._originalPosition = marker.getLatLng();
+  });
+  
+  marker.on("drag", function(e) {
+    // Check for point snapping while dragging
+    const currentPoint = marker.getLatLng();
+    
+    // Skip snapping check if we don't have any defined points
+    if (!window.points || window.points.length === 0) {
+      return;
+    }
+    
+    // Look for close points to snap to
+    let closestPoint = null;
+    let minDistance = Infinity;
+    const snapThreshold = 20; // pixels
+    
+    window.points.forEach(point => {
+      const pointPos = map.latLngToContainerPoint(point.latlng);
+      const markerPos = map.latLngToContainerPoint(currentPoint);
+      
+      const dx = pointPos.x - markerPos.x;
+      const dy = pointPos.y - markerPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      if (distance < snapThreshold && distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
+      }
+    });
+    
+    // Snap to the closest point if found
+    if (closestPoint) {
+      marker.setLatLng(closestPoint.latlng);
+      // Highlight the target point
+      closestPoint.marker.setStyle({
+        fillColor: '#ff4081',
+        radius: 8
+      });
+      marker._snappedToPoint = closestPoint;
+    } else if (marker._snappedToPoint) {
+      // Reset previously snapped point styling
+      marker._snappedToPoint.marker.setStyle({
+        fillColor: '#1e88e5',
+        radius: 5
+      });
+      marker._snappedToPoint = null;
+    }
+  });
+  
+  marker.on("dragend", function(e) {
+    marker._isDragging = false;
+    const newLatLng = marker.getLatLng();
+    
+    // If we're using named snappoints, keep the original name
+    if (!marker._snappedToPoint) {
+      // Update popup content with new coordinates if no custom icon
+      if (!iconUrl) {
         marker.setPopupContent(
           "Pin dropped at: " +
             newLatLng.lat.toFixed(5) +
             ", " +
             newLatLng.lng.toFixed(5)
         );
+      }
+    }
+    
+    // Reset any snap point highlighting
+    if (marker._snappedToPoint) {
+      marker._snappedToPoint.marker.setStyle({
+        fillColor: '#1e88e5',
+        radius: 5
       });
+      marker._snappedToPoint = null;
+    }
+  });
+
+  // On click, prompt for marker actions.
+  marker.on("click", async function (e) {
+    // If marker is being dragged, ignore click
+    if (marker._isDragging) return;
+    
+    // If placement mode is active, just delete the marker
+    if (window.placementModeActive) {
+      map.removeLayer(marker);
+      allMarkers = allMarkers.filter((m) => m !== marker);
+      return;
+    }
+    
+    const action = await customChoice("What would you like to do?");
+    if (action === "drag") {
+      // Manual drag is now handled by the dragend event
+      alert("You can drag the marker directly. Click and hold to move it.");
     } else if (action === "delete") {
       const confirmDelete = await customConfirm(
         "Are you sure you want to delete this marker?"

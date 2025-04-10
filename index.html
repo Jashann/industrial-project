@@ -29,34 +29,13 @@
     </div>
     <div id="map"></div>
     
-    <!-- Visualization Controls Panel -->
-    <div id="visualization-controls">
-      <h3>Visualization Controls</h3>
-      <div class="viz-control-item">
-        <input type="checkbox" id="show-vectors" checked>
-        <label for="show-vectors">Show Direction Vectors</label>
-      </div>
-      <div class="viz-control-item">
-        <input type="checkbox" id="show-edge-vectors">
-        <label for="show-edge-vectors">Show Edge Vectors</label>
-      </div>
-      <div class="viz-control-item">
-        <input type="checkbox" id="show-sign-paths" checked>
-        <label for="show-sign-paths">Show Sign Paths</label>
-      </div>
-      <div class="viz-control-item">
-        <input type="checkbox" id="show-labels" checked>
-        <label for="show-labels">Show Labels</label>
-      </div>
-      <div class="viz-control-item">
-        <input type="checkbox" id="show-in-out-markers">
-        <label for="show-in-out-markers">Show Inside/Outside Markers</label>
-      </div>
-      <div class="viz-control-item">
-        <button id="clear-viz" style="width: 100%; padding: 5px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">
-          Clear All Visualizations
-        </button>
-      </div>
+    <!-- Construction Inventory Panel -->
+    <div id="construction-inventory">
+      <h3>Construction Inventory</h3>
+      <ul id="inventory-list">
+        <!-- Items will be dynamically added here -->
+      </ul>
+      <div id="inventory-empty">No items in this construction.</div>
     </div>
 
     <!-- Buttons Container -->
@@ -76,16 +55,10 @@
         <span>Import State</span>
       </button>
       
-      <!-- Road Area Definition Button -->
-      <button id="define-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px;">
+      <!-- Define Work Area Button -->
+      <button id="define-workarea-btn" class="flex-center" style="background: linear-gradient(135deg, #8b5cf6, #6366f1); width: auto; padding: 10px 15px;">
         <ion-icon name="analytics-outline"></ion-icon>
-        <span>Define Road</span>
-      </button>
-      
-      <!-- Finish Road Definition Button (hidden by default) -->
-      <button id="finish-road-btn" class="flex-center" style="background: linear-gradient(135deg, #0f766e, #0d9488); width: auto; padding: 10px 15px; display: none;">
-        <ion-icon name="checkmark-outline"></ion-icon>
-        <span>Set Road</span>
+        <span>Define Work Area</span>
       </button>
 
       <!-- Construction Area Selection -->
@@ -105,6 +78,34 @@
         <span>AI Check</span>
       </button>
       
+    </div>
+
+    <!-- Item Selection Menu -->
+    <div class="item-selection-menu" id="item-selection-menu">
+      <h3>Traffic Control Items</h3>
+      <div class="item-grid" id="item-grid">
+        <!-- Items will be dynamically added here -->
+      </div>
+    </div>
+    
+    <!-- Line Customization Panel -->
+    <div class="line-panel" id="line-panel">
+      <h3>Line Customization</h3>
+      <div class="line-panel-content">
+        <div class="line-panel-item">
+          <label for="line-distance">Line Length</label>
+          <input type="text" id="line-distance" readonly>
+        </div>
+        <div class="line-panel-item">
+          <label for="segment-distance">Segment Distance (meters)</label>
+          <input type="number" id="segment-distance" min="1" step="1" value="10">
+          <button id="apply-segment-btn">Apply Segmentation</button>
+        </div>
+        <div class="line-panel-actions">
+          <button id="edit-line-btn" class="edit-btn">Edit Line</button>
+          <button id="delete-line-btn" class="delete-btn">Delete Line</button>
+        </div>
+      </div>
     </div>
 
     <!-- Hidden file input for importing state -->
@@ -229,6 +230,10 @@
     <script src="js/road-markers.js"></script>
     <script src="js/traffic-planner.js"></script>
     <script src="js/search.js"></script>
+    <script src="js/item-placement.js"></script>
+    <script src="js/construction-manager.js"></script>
+    <script src="js/work-area-manager.js"></script>
+    <script src="ai_model/integrate.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

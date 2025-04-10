@@ -1,0 +1,16 @@
+
+        Model Evaluation Results:
+        ------------------------
+        Rotation Metrics:
+        - Mean Absolute Error (degrees): 16.27
+        - Mean Circular Error (degrees): 14.65
+        
+        Position Metrics:
+        - Mean Squared Error (offset): 0.000003
+        - Mean Distance Error: 0.001387
+        
+        This means the model can predict the construction rotation
+        with an average error of 14.65 degrees
+        and the construction position with an average error
+        of 0.001387 coordinate units.
+        
